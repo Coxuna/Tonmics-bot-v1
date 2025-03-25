@@ -30,9 +30,7 @@ export default function ComicPage() {
                 <div className="inline-block p-6 md:p-8 bg-transparent mb-8">
                     <img src="/assets/comingsoon.png" alt="Coming Soon" />
                 </div>
-                <p className="text-lg md:text-xl font-semibold text-black mb-8 max-w-md mx-auto">
-                    KEEP UP GAMING AND PLAYING GAMES TO GET ACCESS TO THE COMIC BELOW IN STAGE 2.
-                </p>
+       
                 {/* Countdown Timer */}
               
             </div>
