@@ -38,14 +38,17 @@ const Toast = ({
     imageSrc = "/assets/thought_balloon_nospins.png";
   } else if (responseType === '2 Keys') {
     imageSrc = "/assets/thought_balloon.svg";
-  } else if (responseType === '50 TMS point') {
+  } else if (responseType === '50 Tonmics') {
     imageSrc = "/assets/thought_balloon_coins.png";
   } else if (responseType === '2 Gems') {
     imageSrc = "/assets/thought_balloon_diamond.png";
   } else if (responseType === 'Try again' || responseType === 'Draw') {
     imageSrc = "/assets/thought_balloon_oops.png";
+  }else if (responseType === '1 Key') {
+    imageSrc = "/assets/thought_balloon.svg";
+  }else if (responseType === '20 Tonmics') {
+    imageSrc = "/assets/thought_balloon_coins.png";
   }
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1000]" onClick={closeModal}>
       <div 
