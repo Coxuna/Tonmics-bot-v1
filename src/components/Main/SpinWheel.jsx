@@ -270,8 +270,8 @@ const SpinTheWheel = () => {
       
     }else if (finalSector.responseType === "20 Tonmics") {
       updateObj.tms_points = (user.tms_points || 0) + 20;
-    }else if (finalSector.responseType === "1 Keys") {
-      updateObj.tms_points = (user.tms_points || 0) + 1;
+    }else if (finalSector.responseType === "1 Key") {
+      updateObj.tms_points = (user.t_keys || 0) + 1;
     }
 
     // Update user data
@@ -316,7 +316,7 @@ const SpinTheWheel = () => {
         {/* Tonmics SVG positioned inside the blue background */}
         <img 
           src="/assets/tonmicss.svg" 
-          className="absolute z-10 top-[-90px] left-1/2 transform -translate-x-1/2 w-[200px] h-[200px]" 
+          className="absolute z-10 top-[-70px] left-1/2 transform -translate-x-1/2 w-[160px] h-[160px]" 
         />
         <div className="relative w-[280px] h-[280px] md:w-[350px] md:h-[350px] bg-white rounded-full flex justify-center items-center">
           <canvas 

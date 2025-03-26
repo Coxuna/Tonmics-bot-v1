@@ -46,18 +46,19 @@ const MainPage = () => {
           
             <div className="w-full flex flex-row justify-between items-start">
               {/* Left Navigation */}
-              <div className="w-fit flex flex-col justify-between items-start p-[10px]">
-                <div className="bg-[#D72B29] p-1 mb-2">
-                  <div className="border border-white p-2">
-                    <span className="text-white">Tasks</span>
-                  </div>
-                </div>
-                
-                <div className="bg-[#D72B29] p-1 mb-2">
-                  <div className="border border-white p-2">
-                    <span className="text-white">Referral</span>
-                  </div>
-                </div>
+              <div className="w-fit flex flex-col justify-between items-start p-[5px]">
+  <div className="bg-[#D72B29] p-[4px] mb-1">
+    <div className="border border-white p-1">
+      <span className="text-white text-sm">Tasks</span>
+    </div>
+  </div>
+
+  <div className="bg-[#D72B29] p-[4px] mb-1">
+    <div className="border border-white p-1">
+      <span className="text-white text-sm">Referral</span>
+    </div>
+  </div>
+
 
                
 

@@ -34,8 +34,8 @@ const ConnectButton = () => {
   const getButtonContent = () => {
     if (isLoading) {
       return (
-        <div className="bg-gray-300 p-1">
-          <div className="border border-gray-400 p-2">
+        <div className="bg-gray-300 p-[4px] mb-1">
+          <div className="border border-gray-400 p-1">
             <span className="text-gray-600">Loading...</span>
           </div>
         </div>
@@ -44,10 +44,10 @@ const ConnectButton = () => {
 
     return (
       <div 
-        className="bg-[#D72B29] p-1 cursor-pointer" 
+        className="bg-[#D72B29] p-[4px] mb-1  cursor-pointer" 
         onClick={handleButtonClick}
       >
-        <div className="border border-white p-2">
+        <div className="border border-white p-1">
           <span className="text-white">
             {wallet ? 'Disconnect' : 'Connect'}
           </span>
