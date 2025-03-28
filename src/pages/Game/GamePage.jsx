@@ -38,15 +38,19 @@ export default function GamePage() {
                   </div>
 
                   <NavLink
-                    to={game.path}
-                    className={({ isActive }) =>
-                      `cursor-pointer bg-[#FAA31E] h-10 text-md w-fit px-6 text-black font-medium mt-4 rounded-lg ${
-                        isActive ? "bg-[#50C42F]" : ""
-                      }`
-                    }
-                  >
-                    Play
-                  </NavLink>
+  to={game.path}
+  className={({ isActive }) =>
+    `bg-[#18325B] border-solid border-[#000000] border-r-4 border-b-8 p-2.5 flex flex-row gap-2.5 items-center justify-center w-42 shrink-0 relative ${
+      isActive ? "bg-[#18325B]" : ""
+    }`
+  }
+>
+  <div className="text-white text-center  text-2xl font-normal uppercase relative">
+    Play
+  </div>
+</NavLink>
+
+
                 </li>
               ))}
             </ul>

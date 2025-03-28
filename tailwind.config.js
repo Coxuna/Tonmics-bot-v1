@@ -14,6 +14,11 @@ module.exports = {
         'poppins': ['Poppins', 'sans-serif'],
         'adventure': ['Adventure', 'sans-serif'],
       },
+      screens: {
+        'short': {'raw': '(max-height: 800px)'},
+        'medium': {'raw': '(min-height: 801px) and (max-height: 1000px)'},
+        'tall': {'raw': '(min-height: 1001px)'},
+      }
     },
   },
   plugins: [],

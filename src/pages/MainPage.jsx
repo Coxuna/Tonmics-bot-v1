@@ -15,6 +15,7 @@ import { useTonConnectUI } from "@tonconnect/ui-react";
 import AdComponent from "../components/shared/ShowAdsButton";
 import SpinTheWheel from "../components/Main/SpinWheel";
 import ConnectButton from "../components/Main/TonConnectBtn";
+
 const MainPage = () => {
   const { user } = useUser();
   const [tonConnectUI, setOptions] = useTonConnectUI();
@@ -27,7 +28,6 @@ const MainPage = () => {
 
   return (
     <>
-
       <HomeLayout>
         {/* Modal for tour guide */}
         <BackSheetModal isVisible={user?.first_time}>
@@ -47,20 +47,17 @@ const MainPage = () => {
             <div className="w-full flex flex-row justify-between items-start">
               {/* Left Navigation */}
               <div className="w-fit flex flex-col justify-between items-start p-[5px]">
-  <div className="bg-[#D72B29] p-[4px] mb-1">
-    <div className="border border-white p-1">
-      <span className="text-white text-sm">Tasks</span>
-    </div>
-  </div>
+                <div className="bg-[#D72B29] p-[4px] mb-1">
+                  <div className="border border-white p-1">
+                    <span className="text-white text-sm">Tasks</span>
+                  </div>
+                </div>
 
-  <div className="bg-[#D72B29] p-[4px] mb-1">
-    <div className="border border-white p-1">
-      <span className="text-white text-sm">Referral</span>
-    </div>
-  </div>
-
-
-               
+                <div className="bg-[#D72B29] p-[4px] mb-1">
+                  <div className="border border-white p-1">
+                    <span className="text-white text-sm">Referral</span>
+                  </div>
+                </div>
 
                 <ConnectButton/>
               </div>
@@ -79,21 +76,20 @@ const MainPage = () => {
                   <img className="w-6 h-6 mr-2" src="/assets/zap.png" alt="Keys" />
                   <span className="text-white flex h-full items-center py-2">{getAvailableSpinCounts(user?.spin_count)}/3</span>
                 </div>
-         
-                
               </div>
             </div>
           </div>
           
-          {/* Spinner Section - Centered and with more flexible layout */}
-          <div className="flex-grow flex flex-col justify-center items-center w-full px-4 py-2">
-            <div className="w-full max-w-md">
-              <SpinTheWheel/>
+          {/* Spinner Section - Partially Hidden */}
+          <div className="flex-grow flex flex-col justify-end items-center w-full px-4 pb-8">
+            <div className="w-full max-w-md relative">
+            <div className="absolute -top-58 short:-top-40 medium:-top-50 tall:-top-90 left-0 right-0">
+   <SpinTheWheel/>
+</div>
             </div>
           </div>
         </main>
       </HomeLayout>
-  
     </>
   );
 };

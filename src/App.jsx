@@ -15,7 +15,7 @@ import { Routes, Route} from "react-router";
 function App() {
   return (
       <TonConnectUIProvider
-          manifestUrl="https://ton-connect.github.io/demo-dapp-with-react-ui/tonconnect-manifest.json"
+          manifestUrl="http://tonmics.netlify.app/tonconnect-manifest.json"
           uiPreferences={{ theme: THEME.DARK }}
          
           actionsConfiguration={{

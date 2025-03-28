@@ -40,12 +40,12 @@ const InfoComponent = () => {
   <div className="w-[31.1px] h-[33.1px] absolute left-0 top-0">
     <img
       className="w-[100%] h-[100%] absolute right-[0%] left-[0%] bottom-[0%] top-[0%] overflow-visible"
-      src="/assets/token.png"
+      src="/assets/tokken.png"
       alt="Mask Group 0"
     />
     
     <div
-      className="bg-[#b97000] rounded-[50%] border-solid border-[rgba(255,255,255,0.11)] border-[0.29px] w-[69.74%] h-[69.74%] absolute right-[15.13%] left-[15.13%] bottom-[15.13%] top-[15.13%]"
+      className=" rounded-[50%] border-solid border-[rgba(255,255,255,0.11)] border-[0.29px] w-[69.74%] h-[69.74%] absolute right-[15.13%] left-[15.13%] bottom-[15.13%] top-[15.13%]"
       style={{ boxShadow: "inset 0px 0.58px 0.54px 0px rgba(0, 0, 0, 0.47)" }}
     ></div>
     

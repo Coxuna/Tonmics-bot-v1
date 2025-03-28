@@ -266,14 +266,16 @@ const SpinTheWheel = () => {
     } else if (finalSector.responseType === "2 Keys") {
       updateObj.t_keys = (user.t_keys || 0) + 2;
     } else if (finalSector.responseType === "50 Tonmics") {
-      updateObj.tms_points = (user.tms_points || 0) + 50;
+   const tms_points = parseFloat(user.tms_points || 0) + parseFloat(50);
+      updateObj.tms_points = tms_points.toFixed(2);
       
     }else if (finalSector.responseType === "20 Tonmics") {
-      updateObj.tms_points = (user.tms_points || 0) + 20;
+      const tms_points = parseFloat(user.tms_points || 0) + parseFloat(20);
+      updateObj.tms_points = tms_points.toFixed(2);
     }else if (finalSector.responseType === "1 Key") {
-      updateObj.tms_points = (user.t_keys || 0) + 1;
+      updateObj.t_keys = (user.t_keys || 0) + 1;
     }
-
+   
     // Update user data
     updateUserData(updateObj);
 
@@ -315,9 +317,9 @@ const SpinTheWheel = () => {
       <div className="bg-[#18325B] p-[20px] rounded-full relative">
         {/* Tonmics SVG positioned inside the blue background */}
         <img 
-          src="/assets/tonmicss.svg" 
-          className="absolute z-10 top-[-70px] left-1/2 transform -translate-x-1/2 w-[160px] h-[160px]" 
-        />
+  src="/assets/tonmicss.svg" 
+  className="absolute z-10 top-[-70px] left-1/2 transform -translate-x-1/2 w-[160px] h-[160px] object-contain" 
+/>
         <div className="relative w-[280px] h-[280px] md:w-[350px] md:h-[350px] bg-white rounded-full flex justify-center items-center">
           <canvas 
             ref={canvasRef} 

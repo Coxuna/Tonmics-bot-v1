@@ -286,7 +286,7 @@ const JumbleJestersGame = () => {
   // Add these near your other state definitions
 const gridRef = useRef([]);
 const currentLevelWordsRef = useRef([]);
-
+const levelRef = useRef(1)
 // Update the refs whenever their respective states change
 useEffect(() => {
   gridRef.current = grid;
@@ -296,7 +296,11 @@ useEffect(() => {
   currentLevelWordsRef.current = currentLevelWords;
 }, [currentLevelWords]);
 
-  // Add useEffect to update states when user data changes
+useEffect(() => {
+  levelRef.current = level;
+}, [level]);
+
+// Add useEffect to update states when user data changes
     useEffect(() => {
     if (user && user.telegram_id) {
       // Make sure user is actually loaded with proper data
@@ -347,12 +351,12 @@ useEffect(() => {
 // Add this to your component:
 useEffect(() => {
   // Log timer state changes
-  console.log("Timer state changed:", timer);
+
 }, [timer]);
 
 // Log interval changes
 useEffect(() => {
-  console.log("Timer interval changed:", timerInterval);
+ 
 }, [timerInterval]);
 const formatCountdown = (timeInMs) => {
   if (timeInMs <= 0) return "00:00:00"
@@ -438,13 +442,13 @@ useEffect(() => {
 
 // Function to load words from API
 const loadWords = async () => { 
-  console.log("Loading words for level:", level);
+  console.log("Loading words for level:", levelRef.current);
   console.log("Game started:", gameStarted);
   
   setIsLoading(true);
   try {
     // Pass the level to fetchRandomThreeLetterWords
-    const wordData = await fetchRandomThreeLetterWords(level);
+    const wordData = await fetchRandomThreeLetterWords(levelRef.current);
     console.log("Loaded new words:", wordData);
   
     // Update grid size information
@@ -465,16 +469,16 @@ const loadWords = async () => {
     
      let fallbackLayout;
     
-    if (level <= 2) {
-      fallbackLayout = [3, 3, 3]; // Level 1-2: 3-3-3
-    } else if (level <= 4) {
-      fallbackLayout = [3, 4, 4]; // Level 3-4: 3-4-4
-    } else if (level <= 6) {
-      fallbackLayout = [4, 4, 4]; // Level 5-6: 4-4-4
+   
+     if (levelRef.current <= 2) {
+      fallbackLayout = [3, 3, 3];
+    } else if (levelRef.current <= 4) {
+      fallbackLayout = [3, 4, 4];
+    } else if (levelRef.current <= 6) {
+      fallbackLayout = [4, 4, 4];
     } else {
-      fallbackLayout = [4, 5, 4]; // Level 7+: 4-5-4
+      fallbackLayout = [4, 5, 4];
     }
-    
     const totalFallbackCells = fallbackLayout.reduce((sum, size) => sum + size, 0);
     
     setGridSizes(fallbackLayout);
@@ -682,14 +686,14 @@ const setupGame = (words) => {
   
   // Additional time based on level difficulty
   let levelMultiplier;
-  if (level <= 2) {
-    levelMultiplier = 0.7; // More time for beginners
-  } else if (level <= 5) {
+  if (levelRef.current <= 2) {
+    levelMultiplier = 0.7;
+  } else if (levelRef.current <= 5) {
     levelMultiplier = 0.6;
-  } else if (level <= 10) {
+  } else if (levelRef.current <= 10) {
     levelMultiplier = 0.5;
   } else {
-    levelMultiplier = 0.4; // Less time for advanced players
+    levelMultiplier = 0.4;
   }
   
   // Calculate final timer
@@ -783,8 +787,7 @@ const setupGame = (words) => {
   const handleTimeUp = async () => {
     console.log("Time up! Current grid state:", gridRef.current);
     console.log("Current words to validate:", currentLevelWordsRef.current);
-    const currentLevel = level;
-  
+    console.log("level:",level)
     // Immediately stop the timer
     if (timerInterval) {
         clearInterval(timerInterval);
@@ -870,8 +873,10 @@ const setupGame = (words) => {
     const completedWords = wordResults.filter(result => result.isComplete).length;
     const totalWords = wordsToValidate.length;
   
-    // Update total points
-    const newTotalPoints = tmsPoints + earnedPoints;
+    
+    const TotalPoints = parseFloat(tmsPoints) + parseFloat(earnedPoints);
+
+const newTotalPoints = TotalPoints.toFixed(2);
   
     try {
         await updateUser(user?.telegram_id, { tms_points: newTotalPoints });
@@ -889,7 +894,7 @@ const setupGame = (words) => {
     if (correct === totalWords && completedWords === totalWords) {
       // All words correct - complete level!
       setToastType("success");
-      setToastMessage(`Great job! Proceed to next level!`);
+      setToastMessage(`Perfect! Level ${levelRef.current} complete!`);
       setToastMessage2(`+${earnedPoints} TMS points (${newTotalPoints} total)`);
      
   } else {
@@ -1094,8 +1099,12 @@ const setupGame = (words) => {
       wordResults
   });
   
+  const TotalPoints = parseFloat(tmsPoints) + parseFloat(earnedPoints);
+
+  const newTotalPoints = TotalPoints.toFixed(2);
   // Calculate total points earned
-  const newTotalPoints = tmsPoints + earnedPoints;
+  
+  
   console.log(`Updating points: ${tmsPoints} + ${earnedPoints} = ${newTotalPoints}`);
   
   // Update TMS points in the database
@@ -1365,6 +1374,7 @@ const setupGame = (words) => {
         // Also clear the auto advancement flag if using that approach
         setAutoLevelAdvanceScheduled(false);
     // Increment level
+    levelRef.current += 1;
     setLevel((prevLevel) => prevLevel + 1);
     setToastVisible(false);
     
@@ -1403,6 +1413,7 @@ const setupGame = (words) => {
   console.log("Restarting game - resetting all state");
   
   // Clear any lingering game data
+  levelRef.current = 1;
   setLevel(1);
   setToastVisible(false);
   
@@ -1592,7 +1603,7 @@ const closeToast = () => {
 
         <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden font-['Poppins',sans-serif] mb-16">
           {/* Game Header */}
-          <div className="relative bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 p-3 rounded-t-xl shadow-md">
+          <div className="relative bg-[#18325B] p-3 rounded-t-xl shadow-md">
             <div className="flex justify-between items-center">
               <div className="flex items-center space-x-2">
                 <div className="bg-white p-1 h-10 w-10 rounded-full flex items-center justify-center shadow-md">
@@ -1605,7 +1616,7 @@ const closeToast = () => {
                 {/* Ensures spacing between elements */}
                 <div className="bg-white p-1 rounded-lg shadow-md flex items-center">
                   <span className="font-bold text-gray-800 text-sm">{tmsPoints}</span>
-                  <span className="text-blue-500 text-sm ml-3">TMS</span> {/* Added ml-1 for spacing */}
+                  <span className="text-blue-500 text-sm ml-1">TMS</span> {/* Added ml-1 for spacing */}
                 </div>
                 <div className="bg-white p-1 rounded-lg shadow-md flex items-center">
                   <span className="text-purple-500 text-sm">💎</span>
@@ -1613,14 +1624,14 @@ const closeToast = () => {
                 </div>
                 <div className="bg-white p-1 rounded-lg shadow-md flex items-center">
                   <span className="text-yellow-500 text-sm">🏆</span>
-                  <span className="font-bold text-gray-800 text-sm ml-1">{level}</span> {/* Added ml-1 for spacing */}
+                  <span className="font-bold text-gray-800 text-sm ml-1">{levelRef.current}</span> {/* Added ml-1 for spacing */}
                 </div>
               </div>
             </div>
           </div>
 
           {/* Game Status Bar */}
-          <div className="p-2 bg-gray-100">
+          <div className="p-2 bg-[#FAA31E] shadow-lg">
             <div className="flex justify-center items-center">
               <div className="flex items-center bg-blue-600 text-white px-3 py-1 rounded-full shadow-md">
                 <span className="mr-1">⏱️</span>
@@ -1690,7 +1701,7 @@ const closeToast = () => {
           {/* Letter Rack */}
           {/* Letter Rack */}
           <div className="p-3 bg-gray-100">
-            <div className="bg-gradient-to-r from-gray-800 to-gray-900 p-3 rounded-xl shadow-inner mx-auto">
+            <div className="bg-[#18325B] p-3 rounded-xl shadow-inner mx-auto">
               <div className="flex justify-center flex-wrap gap-2">
                 {letters.map((letter, index) => (
                   <div
@@ -1714,66 +1725,65 @@ const closeToast = () => {
 
           {/* Game Controls */}
           <div className="p-3 bg-white border-t border-gray-200">
-            <div className="flex justify-between mb-3">
-              {/* Hint Button */}
-              {/* Hint Button with Countdown */}
-              <div className="flex flex-col items-center">
-                <button
-                  onClick={useHint}
-                  disabled={!gameStarted || isLoading || validatingWords}
-                  className={`flex items-center justify-center px-3 py-1 rounded-lg text-sm ${
-                    gameStarted && !isLoading && !validatingWords
-                      ? "bg-gradient-to-r from-green-400 to-green-500 text-white hover:from-green-500 hover:to-green-600 shadow-md"
-                      : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  }`}
-                >
-                  <span className="mr-1">💡</span>
-                  <span className="font-bold">Hint</span>
-                </button>
-                <div className="text-xs mt-1 font-semibold text-blue-600">{getHintDescription()}</div>
-                {hintCountdown && (
-                  <div className="text-xs mt-1 font-semibold text-red-500">Resets in: {hintCountdown}</div>
-                )}
-              </div>
+          <div className="flex justify-between mb-3">
+  {/* Hint Button */}
+  <div className="flex flex-col items-center">
+    <button
+      onClick={useHint}
+      disabled={!gameStarted || isLoading || validatingWords}
+      className={`flex items-center justify-center w-24 h-10 rounded-lg text-sm ${
+        gameStarted && !isLoading && !validatingWords
+          ? "bg-[#FAA31E] shadow-lg text-white hover:from-green-500 hover:to-green-600 shadow-md"
+          : "bg-[#FAA31E] shadow-lg text-white-400 cursor-not-allowed"
+      }`}
+    >
+      <span className="mr-1">💡</span>
+      <span className="font-bold">Hint</span>
+    </button>
+    <div className="text-xs mt-1 font-semibold text-blue-600">{getHintDescription()}</div>
+    {hintCountdown && (
+      <div className="text-xs mt-1 font-semibold text-red-500">Resets in: {hintCountdown}</div>
+    )}
+  </div>
 
-              {/* Shuffle Button */}
-              {/* Shuffle Button with Countdown */}
-              <div className="flex flex-col items-center">
-                <button
-                  onClick={shuffleGrid}
-                  disabled={!gameStarted || isLoading || validatingWords}
-                  className={`flex items-center justify-center px-3 py-1 rounded-lg text-sm ${
-                    gameStarted && !isLoading && !validatingWords
-                      ? "bg-gradient-to-r from-blue-400 to-blue-500 text-white hover:from-blue-500 hover:to-blue-600 shadow-md"
-                      : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  }`}
-                >
-                  <span className="mr-1">🔄</span>
-                  <span className="font-bold">Shuffle</span>
-                </button>
-                <div className="text-xs mt-1 font-semibold text-blue-600">{getShuffleDescription()}</div>
-                {shuffleCountdown && (
-                  <div className="text-xs mt-1 font-semibold text-red-500">Resets in: {shuffleCountdown}</div>
-                )}
-              </div>
+  {/* Shuffle Button */}
+  <div className="flex flex-col items-center">
+    <button
+      onClick={shuffleGrid}
+      disabled={!gameStarted || isLoading || validatingWords}
+      className={`flex items-center justify-center w-24 h-10 rounded-lg text-sm ${
+        gameStarted && !isLoading && !validatingWords
+          ? "bg-[#FAA31E] shadow-lg text-white hover:from-blue-500 hover:to-blue-600 shadow-md"
+          : "bg-[#FAA31E] shadow-lg text-white-400 cursor-not-allowed"
+      }`}
+    >
+      <span className="mr-1">🔄</span>
+      <span className="font-bold">Shuffle</span>
+    </button>
+    <div className="text-xs mt-1 font-semibold text-blue-600">{getShuffleDescription()}</div>
+    {shuffleCountdown && (
+      <div className="text-xs mt-1 font-semibold text-red-500">Resets in: {shuffleCountdown}</div>
+    )}
+  </div>
 
-              {/* Quit Button */}
-              <button
-                onClick={() => {
-                  setToastType("quitConfirm")
-                  setToastMessage("Do you want to quit the game?")
-                  setToastMessage2("Your progress will be lost")
-                  setToastVisible(true)
-                }}
-                className="flex items-center justify-center px-3 py-1 rounded-lg text-sm bg-gradient-to-r from-red-400 to-red-500 text-white hover:from-red-500 hover:to-red-600 shadow-md"
-              >
-                <div className="flex items-center gap-x-1">
-                  <XCircle className="w-4 h-4" />
-                  <span className="font-bold">Quit</span>
-                </div>
-              </button>
-            </div>
-
+  {/* Quit Button */}
+  <div className="flex flex-col items-center">
+    <button
+      onClick={() => {
+        setToastType("quitConfirm")
+        setToastMessage("Do you want to quit the game?")
+        setToastMessage2("Your progress will be lost")
+        setToastVisible(true)
+      }}
+      className="flex items-center justify-center w-24 h-10 rounded-lg text-sm bg-[#FAA31E] shadow-lg text-white hover:from-red-500 hover:to-red-600 shadow-md"
+    >
+      <div className="flex items-center gap-x-1">
+        <XCircle className="w-4 h-4" />
+        <span className="font-bold">Quit</span>
+      </div>
+    </button>
+  </div>
+</div>
             {/* Play/Submit Button */}
             <button
               onClick={gameStarted ? checkAnswers : initializeGame}
@@ -1781,7 +1791,7 @@ const closeToast = () => {
               className={`w-full py-3 rounded-xl font-bold text-lg shadow-lg transition-all duration-300 transform hover:scale-105 ${
                 isLoading || validatingWords
                   ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  : "bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white hover:from-pink-600 hover:via-purple-600 hover:to-indigo-600"
+                  : "bg-[#18325B] text-white hover:from-pink-600 hover:via-purple-600 hover:to-indigo-600"
               }`}
             >
               {isLoading

@@ -35,7 +35,13 @@ export const UserProvider = ({ children }) => {
                     last_hint: data.last_hint,
                     last_shuffle: data.last_shuffle,
                     last_spin: data.last_spin,
+                    last_claim: data.last_claim,
                     first_time: data.is_first_time,
+                    farming_stage: data.farming_stage,
+                    farming_start_time: data.farming_start_time ,
+                    farming_time_remaining : data.farming_time_remaining,
+                    accumulated_amount: data.accumulated_amount ,
+                    last_farming_update: data.last_farming_update,
                     stateVariable: 1 // Added for tour state tracking
                 });
             } else {
@@ -80,7 +86,13 @@ export const UserProvider = ({ children }) => {
                     last_hint: data.last_hint,
                     last_shuffle: data.last_shuffle,
                     last_spin: data.last_spin,
+                    last_claim: data.last_claim,
                     first_time: data.is_first_time,
+                    farming_stage: data.farming_stage,
+                 farming_start_time: data.farming_start_time ,
+                   farming_time_remaining : data.farming_time_remaining,
+                   accumulated_amount: data.accumulated_amount ,
+                   last_farming_update: data.last_farming_update,
                     stateVariable: 1 // Added for tour state tracking
                 })
             } else {
