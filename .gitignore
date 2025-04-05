@@ -11,7 +11,7 @@ Thumbs.db
 node_modules/
 vendor/
 dist/
-build/
+
 
 # Ignore compiled files
 *.class
