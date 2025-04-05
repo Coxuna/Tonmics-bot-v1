@@ -3,6 +3,7 @@ import ResponsivePadding from '../../components/shared/ResponsivePadding';
 
 // TaskItem Component
 const TaskItem = ({ task, onStartTask, onClaimReward }) => {
+  const a = 7;
   const handleAction = () => {
     if (task.status === 'completed') {
       onClaimReward(task.id);
