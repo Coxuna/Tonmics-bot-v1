@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig(({ mode }) => {
-  // Load environment variables based on the mode
   const env = loadEnv(mode, process.cwd())
 
   return {
@@ -15,9 +14,10 @@ export default defineConfig(({ mode }) => {
       fs: {
         allow: ['./'],
       },
+      allowedHosts: ['uncommon-urgently-ant.ngrok-free.app'], // Add this line
     },
     define: {
-      __API_URL__: JSON.stringify(env.VITE_API_URL), // Example usage
+      __API_URL__: JSON.stringify(env.VITE_API_URL),
     },
   }
 })

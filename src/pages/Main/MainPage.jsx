@@ -1,25 +1,26 @@
 import { useState, useEffect } from "react";
-import { useUser } from "../hooks/UserProvider";
-import { useUserStore } from "../hooks/UserStoreProvider";
-import BackSheetModal from "../components/Main/BackSheetModal";
-import Welcome from "../components/Main/Welcome";
-import FinalInfo from "../components/Main/FinalInfo";
-import SpinInfo from "../components/Main/SpinInfo";
-import BottomNav from "../components/shared/NavBar";
-import { useTelegramWebApp } from "../hooks/TelegramProvider";
-import InfoComponent from "../components/Main/Info";
-import { getAvailableSpinCounts } from "../hooks/constants";
+import { useUser } from "../../hooks/UserProvider";
+import { useUserStore } from "../../hooks/UserStoreProvider";
+import BackSheetModal from "../../components/Main/BackSheetModal";
+import Welcome from "../../components/Main/Welcome";
+import FinalInfo from "../../components/Main/FinalInfo";
+import SpinInfo from "../../components/Main/SpinInfo";
+import BottomNav from "../../components/shared/NavBar";
+import { useTelegramWebApp } from "../../hooks/TelegramProvider";
+import InfoComponent from "../../components/Main/Info";
+import { getAvailableSpinCounts } from "../../hooks/constants";
 import HomeLayout from "./MainLayout";
-import ResponsivePadding from "../components/shared/ResponsivePadding";
+import ResponsivePadding from "../../components/shared/ResponsivePadding";
 import { useTonConnectUI } from "@tonconnect/ui-react";
-import AdComponent from "../components/shared/ShowAdsButton";
-import SpinTheWheel from "../components/Main/SpinWheel";
-import ConnectButton from "../components/Main/TonConnectBtn";
+import AdComponent from "../../components/shared/ShowAdsButton";
+import SpinTheWheel from "../../components/Main/SpinWheel";
+import ConnectButton from "../../components/Main/TonConnectBtn";
+import { useNavigate } from "react-router";
 
 const MainPage = () => {
   const { user } = useUser();
   const [tonConnectUI, setOptions] = useTonConnectUI();
-
+  const navigate = useNavigate();
   useEffect(() => {
     if (user) {
       console.log("Updated User Data:", user);
@@ -44,16 +45,16 @@ const MainPage = () => {
           <div className="flex-grow-0">
             <InfoComponent />
           
-            <div className="w-full flex flex-row justify-between items-start">
+            <div className="w-full flex flex-row justify-between items-start ">
               {/* Left Navigation */}
-              <div className="w-fit flex flex-col justify-between items-start p-[5px]">
-                <div className="bg-[#D72B29] p-[4px] mb-1">
+              <div className="w-fit flex flex-col justify-between items-start  p-[5px]">
+                <div className="bg-[#D72B29] p-[4px] cursor-pointer mb-1" onClick={()=>{navigate("/task")}}>
                   <div className="border border-white p-1">
                     <span className="text-white text-sm">Tasks</span>
                   </div>
                 </div>
 
-                <div className="bg-[#D72B29] p-[4px] mb-1">
+                <div className="bg-[#D72B29] p-[4px] mb-1 cursor-pointer" onClick={()=>{navigate("/Friends")}}>
                   <div className="border border-white p-1">
                     <span className="text-white text-sm">Referral</span>
                   </div>
@@ -83,7 +84,7 @@ const MainPage = () => {
           {/* Spinner Section - Partially Hidden */}
           <div className="flex-grow flex flex-col justify-end items-center w-full px-4 pb-8">
             <div className="w-full max-w-md relative">
-            <div className="absolute -top-58 short:-top-40 medium:-top-50 tall:-top-90 left-0 right-0">
+            <div className="absolute -top-65 short:-top-40 medium:-top-50 tall:-top-90 left-0 right-0">
    <SpinTheWheel/>
 </div>
             </div>

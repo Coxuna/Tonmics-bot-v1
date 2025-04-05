@@ -2,6 +2,30 @@ import React, { useEffect, useRef, useState } from 'react';
 import Toast from "./ToastModal";
 import { useUser } from '../../hooks/UserProvider';
 
+// Helper function to safely parse timestamp from database
+const parseStoredTimestamp = (storedTime) => {
+  if (!storedTime) return null;
+  
+  // If it's already a number, return it
+  if (typeof storedTime === 'number') return storedTime;
+  
+  try {
+    // If it's an ISO string
+    if (typeof storedTime === 'string' && storedTime.includes('T')) {
+      return new Date(storedTime).getTime();
+    }
+    
+    // If it's a formatted date string
+    const dateStr = storedTime.includes('T') ? storedTime : storedTime.replace(' ', 'T');
+    // Add Z to ensure UTC interpretation if not already present
+    const utcDateStr = dateStr.endsWith('Z') ? dateStr : `${dateStr}Z`;
+    return new Date(utcDateStr).getTime();
+  } catch (error) {
+    console.error("Error parsing timestamp:", error);
+    return null;
+  }
+};
+
 const SpinTheWheel = () => {
   // Use user context
   const { user, updateUser } = useUser();
@@ -13,12 +37,12 @@ const SpinTheWheel = () => {
   // Enhanced spin tracking states
   const [spinsLeft, setSpinsLeft] = useState(3);
   const [lastSpinTime, setLastSpinTime] = useState(null);
+  const [spinCountdown, setSpinCountdown] = useState("");
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [toastMessage2, setToastMessage2] = useState("Keep spinning to win more daily");
   const [responseType, setResponseType] = useState("");
   const [showOutOfSpins, setShowOutOfSpins] = useState(false);
-  const [lastCheckedTime, setLastCheckedTime] = useState(Date.now());
 
   const sectors = [
     { color: "black", text: "#fff", label: "Try again", responseType: "Try again" },
@@ -39,77 +63,81 @@ const SpinTheWheel = () => {
   const [angVel, setAngVel] = useState(0);
   const [ang, setAng] = useState(0);
 
-  // Flexible time conversion function
-  const getTimeDifference = (currentTime, lastTime, unit = 'minutes') => {
-    const timeDiff = currentTime - lastTime;
-    switch(unit) {
-      case 'seconds':
-        return timeDiff / 1000;
-      case 'minutes':
-        return timeDiff / (1000 * 60);
-      case 'hours':
-        return timeDiff / (1000 * 60 * 60);
-      default:
-        throw new Error('Invalid time unit. Use "seconds", "minutes", or "hours".');
-    }
-  };
-
-  // Check and update available spins
-  const checkAndUpdateSpins = (timeUnit = 'minutes', resetInterval = 1) => {
-    if (!user) return;
-
-    const currentTime = new Date().getTime();
-    const lastSpinTime = user.last_spin ? new Date(user.last_spin).getTime() : 0;
-    
-    const timeSinceLastSpin = getTimeDifference(currentTime, lastSpinTime, timeUnit);
-
-    if (timeSinceLastSpin >= resetInterval) {
-      const newSpinCount = 3; // Reset to default spin count
-      setSpinsLeft(newSpinCount);
-      
-      // Update user data if needed
-      updateUserData({
-        spin_count: newSpinCount,
-        last_spin: new Date().toISOString().replace("T", " ").split(".")[0]
-      });
-
-      // Reset out of spins state
-      if (showOutOfSpins) {
-        setShowOutOfSpins(false);
-        setShowToast(false);
-      }
-    } else {
-      // Use spin count from user data
-      setSpinsLeft(user.spin_count || 0);
-    }
-    
-    setLastCheckedTime(currentTime);
-  };
-
-  // Update user data
-  const updateUserData = async (updateObj) => {
+  // Load user spin data when user is available
+  useEffect(() => {
     if (user && user.telegram_id) {
-      try {
-        await updateUser(user.telegram_id, updateObj);
-      } catch (error) {
-        console.error("Error updating user data:", error);
+      console.log("Setting user spin data:", user.spin_count, user.last_spin);
+      
+      // Fix: Make sure we properly handle different data types
+      const spinCount = user.spin_count !== undefined && user.spin_count !== null ? Number(user.spin_count) : 3;
+      setSpinsLeft(spinCount);
+      
+      // Parse the stored timestamp correctly
+      if (user.last_spin === null || user.last_spin === undefined) {
+        setLastSpinTime(null);
+      } else {
+        const parsedLastSpin = parseStoredTimestamp(user.last_spin);
+        setLastSpinTime(parsedLastSpin);
       }
     }
-  };
-
-  // Periodic spin checks
-  useEffect(() => {
-    const checkSpinsInterval = setInterval(() => {
-      checkAndUpdateSpins(); // Uses default 'minutes' and 1-minute interval
-    }, 5000);
-    return () => clearInterval(checkSpinsInterval);
-  }, [user, lastCheckedTime]);
-
-  // Initial spin check when user changes
-  useEffect(() => {
-    checkAndUpdateSpins();
   }, [user]);
 
+  // Timer effect to check and reset spins
+  useEffect(() => {
+    if (!user) {
+      // Don't run the timer until we have proper data
+      return;
+    }
+  
+    // Only start timer if lastSpinTime exists
+    if (lastSpinTime) {
+      const checkAndUpdateTimer = () => {
+        const now = Date.now();
+        const timeElapsed = now - lastSpinTime;
+        // Reset after 60 minutes (60 * 60 * 1000 ms)
+        const timeRemaining = 24 * 60 * 60 * 1000 - timeElapsed;
+        console.log("Time remaining for spin reset:", timeRemaining);
+        
+        if (timeRemaining <= 0) {
+          // Reset spins to 3
+          setSpinsLeft(3);
+          setLastSpinTime(null);
+          setSpinCountdown("");
+          setShowOutOfSpins(false);
+          
+          // Update database
+          updateUser(user?.telegram_id, { 
+            spin_count: 3,
+            last_spin: null
+          });
+        } else {
+          // Update countdown display with hours, minutes, and seconds
+          const hours = Math.floor(timeRemaining / (60 * 60 * 1000));
+          const minutes = Math.floor((timeRemaining % (60 * 60 * 1000)) / (60 * 1000));
+          const seconds = Math.floor((timeRemaining % (60 * 1000)) / 1000);
+          
+          // Format with leading zeros for better readability
+          const formattedHours = String(hours).padStart(2, '0');
+          const formattedMinutes = String(minutes).padStart(2, '0');
+          const formattedSeconds = String(seconds).padStart(2, '0');
+          
+          setSpinCountdown(`${formattedHours}h ${formattedMinutes}m ${formattedSeconds}s`);
+        }
+      };
+      
+      // Initial check
+      checkAndUpdateTimer();
+      
+      // Set interval to update every second
+      const interval = setInterval(checkAndUpdateTimer, 1000);
+      
+      return () => clearInterval(interval);
+    } else {
+      // Clear any countdown if lastSpinTime is null
+      setSpinCountdown("");
+    }
+  }, [lastSpinTime, user]);
+  
   const drawSector = (ctx, sector, i) => {
     const radius = ctx.canvas.width / 2;
     const angle = arc * i;
@@ -153,71 +181,71 @@ const SpinTheWheel = () => {
     ctx.canvas.style.transform = `rotate(${currentAng}rad)`;
   };
 
- useEffect(() => {
-  const canvas = canvasRef.current;
-  const ctx = canvas.getContext('2d');
-  const dia = canvas.width;
-  const rad = dia / 2;
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const dia = canvas.width;
+    const rad = dia / 2;
 
-  // Initial draw
-  sectors.forEach((sector, i) => drawSector(ctx, sector, i));
-  rotate(ctx, ang);
+    // Initial draw
+    sectors.forEach((sector, i) => drawSector(ctx, sector, i));
+    rotate(ctx, ang);
 
-  // Animation loop
-  let rafId;
-  const engine = () => {
-    // More precise check for wheel stopping
-    if (angVel < 0.002 && spinButtonClicked) {
-      console.log('Wheel has stopped spinning!');
-      const finalSectorIndex = getIndex();
-      const finalSector = sectors[finalSectorIndex];
-      console.log(`Final Result: ${finalSector.label}`);
-      
-      // Prepare toast message
-      if (finalSector.responseType === "Try again") {
-        setToastMessage("Better luck next time!");
-      } else {
-        setToastMessage(`Congratulations! You won ${finalSector.label}`);
+    // Animation loop
+    let rafId;
+    const engine = () => {
+      // More precise check for wheel stopping
+      if (angVel < 0.002 && spinButtonClicked) {
+        console.log('Wheel has stopped spinning!');
+        const finalSectorIndex = getIndex();
+        const finalSector = sectors[finalSectorIndex];
+        console.log(`Final Result: ${finalSector.label}`);
+        
+        // Prepare toast message
+        if (finalSector.responseType === "Try again") {
+          setToastMessage("Better luck next time!");
+        } else {
+          setToastMessage(`Congratulations! You won ${finalSector.label}`);
+        }
+        
+        // Call the new finalization method
+        finalizeSpinResult(finalSector);
+        
+        // Update response type for toast
+        setResponseType(finalSector.responseType);
+        
+        // Show toast
+        setShowToast(true);
+        
+        // Post message to parent
+        window.parent.postMessage({
+          message: `You have earned ${finalSector.label}`, 
+          source: "spinner", 
+          type: finalSector.responseType
+        }, "*");
+        
+        setSpinButtonClicked(false);
+        return;
       }
-      
-      // Call the new finalization method
-      finalizeSpinResult(finalSector);
-      
-      // Update response type for toast
-      setResponseType(finalSector.responseType);
-      
-      // Show toast
-      setShowToast(true);
-      
-      // Post message to parent
-      window.parent.postMessage({
-        message: `You have earned ${finalSector.label}`, 
-        source: "spinner", 
-        type: finalSector.responseType
-      }, "*");
-      
-      setSpinButtonClicked(false);
-      return;
-    }
 
-    const newAngVel = angVel * friction;
-    const newAng = (ang + newAngVel) % TAU;
+      const newAngVel = angVel * friction;
+      const newAng = (ang + newAngVel) % TAU;
 
-    setAngVel(newAngVel < 0.002 ? 0 : newAngVel);
-    setAng(newAng);
+      setAngVel(newAngVel < 0.002 ? 0 : newAngVel);
+      setAng(newAng);
 
-    rotate(ctx, newAng);
+      rotate(ctx, newAng);
+      rafId = requestAnimationFrame(engine);
+    };
+
     rafId = requestAnimationFrame(engine);
-  };
 
-  rafId = requestAnimationFrame(engine);
+    return () => {
+      cancelAnimationFrame(rafId);
+    };
+  }, [ang, angVel, spinButtonClicked, user]);
 
-  return () => {
-    cancelAnimationFrame(rafId);
-  };
-}, [ang, angVel, spinButtonClicked, user]);
-
- const handleSpin = () => {
+  const handleSpin = () => {
     // Check if user is logged in
     if (!user) {
       setToastMessage("Please log in to spin the wheel");
@@ -226,14 +254,13 @@ const SpinTheWheel = () => {
       return;
     }
 
-    // Force a check of available spins before proceeding
-    checkAndUpdateSpins();
-
+    console.log("Spins left:", spinsLeft);
+    
     // Check if spins are available
     if (spinsLeft <= 0) {
       setShowOutOfSpins(true);
       setToastMessage("You're out of spins!");
-      setToastMessage2("Watch an ad to earn more spins");
+      setToastMessage2(`Watch an ad to earn more spins${spinCountdown ? `. Free spins reset in ${spinCountdown}` : ''}`);
       setResponseType("Try again");
       setShowToast(true);
       return;
@@ -248,46 +275,49 @@ const SpinTheWheel = () => {
     }
   };
 
-  // Modified handleSpin in main useEffect to handle user updates
+  // Modified finalizeSpinResult to handle user updates
   const finalizeSpinResult = (finalSector) => {
-    const currentTime = new Date().toISOString().replace("T", " ").split(".")[0];
     const newSpinCount = spinsLeft - 1;
+    const currentTime = Date.now();
 
     // Prepare update object
     const updateObj = {
-      spin_count: newSpinCount,
-      last_spin: currentTime
+      spin_count: newSpinCount
     };
 
     // Add specific rewards based on sector
     if (finalSector.responseType === "2 Gems") {
       updateObj.gems = (user.gems || 0) + 2;
-    
     } else if (finalSector.responseType === "2 Keys") {
       updateObj.t_keys = (user.t_keys || 0) + 2;
     } else if (finalSector.responseType === "50 Tonmics") {
-   const tms_points = parseFloat(user.tms_points || 0) + parseFloat(50);
+      const tms_points = parseFloat(user.tms_points || 0) + parseFloat(50);
       updateObj.tms_points = tms_points.toFixed(2);
-      
-    }else if (finalSector.responseType === "20 Tonmics") {
+    } else if (finalSector.responseType === "20 Tonmics") {
       const tms_points = parseFloat(user.tms_points || 0) + parseFloat(20);
       updateObj.tms_points = tms_points.toFixed(2);
-    }else if (finalSector.responseType === "1 Key") {
+    } else if (finalSector.responseType === "1 Key") {
       updateObj.t_keys = (user.t_keys || 0) + 1;
     }
    
+    // If this was the last spin, set the timer
+    if (newSpinCount === 0) {
+      setLastSpinTime(currentTime);
+      updateObj.last_spin = currentTime;
+    }
+
     // Update user data
-    updateUserData(updateObj);
+    if (user && user.telegram_id) {
+      updateUser(user.telegram_id, updateObj);
+    }
 
     // Update local states
     setSpinsLeft(newSpinCount);
-    setLastSpinTime(new Date().getTime());
   };
 
   // Existing toast and ad watching handlers
   const handleCloseToast = () => {
     setShowToast(false);
-    checkAndUpdateSpins();
   };
 
   const handleWatchAd = () => {
@@ -298,9 +328,11 @@ const SpinTheWheel = () => {
           const newSpinCount = Math.min((spinsLeft || 0) + 1, 3);
           
           // Update user data
-          updateUserData({
-            spin_count: newSpinCount
-          });
+          if (user && user.telegram_id) {
+            updateUser(user.telegram_id, {
+              spin_count: newSpinCount
+            });
+          }
           
           setSpinsLeft(newSpinCount);
           setShowToast(false);
@@ -317,9 +349,9 @@ const SpinTheWheel = () => {
       <div className="bg-[#18325B] p-[20px] rounded-full relative">
         {/* Tonmics SVG positioned inside the blue background */}
         <img 
-  src="/assets/tonmicss.svg" 
-  className="absolute z-10 top-[-70px] left-1/2 transform -translate-x-1/2 w-[160px] h-[160px] object-contain" 
-/>
+          src="/assets/tonmicss.svg" 
+          className="absolute z-10 top-[-70px] left-1/2 transform -translate-x-1/2 w-[160px] h-[160px] object-contain" 
+        />
         <div className="relative w-[280px] h-[280px] md:w-[350px] md:h-[350px] bg-white rounded-full flex justify-center items-center">
           <canvas 
             ref={canvasRef} 

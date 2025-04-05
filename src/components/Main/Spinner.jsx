@@ -353,6 +353,11 @@ const SpinWheel = () => {
         className="absolute -top-30 left-[43%] -translate-x-1/2 max-w-full z-20 pointer-events-none"
         alt="Tonmics"
       />
+        <div
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-0 h-0
+              border-l-4 border-r-4 border-b-8 border-l-transparent border-r-transparent border-b-red-600"
+          style={{ zIndex: 50 }}
+        />
 
       {/* Toast Component */}
       {showToast && (

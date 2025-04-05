@@ -37,12 +37,19 @@ export const UserProvider = ({ children }) => {
                     last_spin: data.last_spin,
                     last_claim: data.last_claim,
                     first_time: data.is_first_time,
+                    is_frens_first_time: data.is_frens_first_time,
                     farming_stage: data.farming_stage,
                     farming_start_time: data.farming_start_time ,
                     farming_time_remaining : data.farming_time_remaining,
                     accumulated_amount: data.accumulated_amount ,
                     last_farming_update: data.last_farming_update,
-                    stateVariable: 1 // Added for tour state tracking
+                    jumbo_trials:data.jumbo_trials,
+                   last_jumbo: data.last_jumbo,
+                   free_trials: data.free_trials,
+                   purchased_trials: data.purchased_trials,
+                    stateVariable: 1, // Added for tour state tracking
+                    friendsState:3,
+                    count_spin: data.count_spin
                 });
             } else {
                 console.error("User not found:", data.message);
@@ -65,36 +72,47 @@ export const UserProvider = ({ children }) => {
                 },
                 body: JSON.stringify(userData),
             });
-
+    
             const data = await response.json();
             console.log("Create User Response:", data);
-
+    
             if (response.ok) {
+                const user = data.user; // Extract user object
                 setUser({
-                    id: data.id,
-                    t_keys: data.t_keys,
-                    gems: data.gems,
-                    tms_points: data.tms_points,
-                    referral_code: data.referral_code,
-                    name: data.name,
-                    user_name: data.user_name,
-                    telegram_id: data.telegram_id,
-                    profile_image: data.profile_image,
-                    spin_count: data.spin_count,
-                    hint_count: data.hint_count,
-                    shuffle_count: data.shuffle_count,
-                    last_hint: data.last_hint,
-                    last_shuffle: data.last_shuffle,
-                    last_spin: data.last_spin,
-                    last_claim: data.last_claim,
-                    first_time: data.is_first_time,
-                    farming_stage: data.farming_stage,
-                 farming_start_time: data.farming_start_time ,
-                   farming_time_remaining : data.farming_time_remaining,
-                   accumulated_amount: data.accumulated_amount ,
-                   last_farming_update: data.last_farming_update,
-                    stateVariable: 1 // Added for tour state tracking
-                })
+                    id: user.id,
+                    t_keys: user.t_keys,
+                    gems: user.gems,
+                    tms_points: user.tms_points,
+                    referral_code: user.referral_code,
+                    name: user.name,
+                    user_name: user.user_name,
+                    telegram_id: user.telegram_id,
+                    profile_image: user.profile_image,
+                    spin_count: user.spin_count,
+                    hint_count: user.hint_count,
+                    shuffle_count: user.shuffle_count,
+                    last_hint: user.last_hint,
+                    last_shuffle: user.last_shuffle,
+                    last_spin: user.last_spin,
+                    last_claim: user.last_claim,
+                    first_time: user.is_first_time,
+                    is_frens_first_time: user.is_frens_first_time,
+                    farming_stage: user.farming_stage,
+                    farming_start_time: user.farming_start_time,
+                    farming_time_remaining: user.farming_time_remaining,
+                    accumulated_amount: user.accumulated_amount,
+                    last_farming_update: user.last_farming_update,
+                    jumbo_trials: user.jumbo_trials,
+                    last_jumbo: user.last_jumbo,
+                    available_trials: user.available_trials,
+                    free_trials: user.free_trials,
+                    purchased_trials: user.purchased_trials,
+                    count_spin: user.count_spin,
+                    stateVariable: 1,
+                    friendsState: 3,
+                });
+    
+                return user.id; // Return correct user ID
             } else {
                 console.error("Error creating user:", data.message);
             }
@@ -104,6 +122,7 @@ export const UserProvider = ({ children }) => {
             setLoading(false);
         }
     };
+    
 
     // Function to Check if User Exists
     const checkUserExists = async (telegram_id) => {
@@ -153,6 +172,31 @@ export const UserProvider = ({ children }) => {
             stateVariable: prevUser.stateVariable + 1
         }));
     };
+    const getReferredUsernames = async (telegramId) => {
+        try {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/referred-users?telegram_id=${telegramId}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch referred usernames');
+            }
+            const referredUsers = await response.json();
+            console.log("referredUsers:",referredUsers)
+            return referredUsers || [];
+        } catch (error) {
+            console.error("Error fetching referred usernames:", error);
+            return [];
+        }
+    };
+    
+
+     // Tour functions migrated from UserStoreProvider
+     const workWithFriendsTour = () => {
+        if (!user) return;
+        
+        setUser((prevUser) => ({
+            ...prevUser,
+             friendsState: prevUser.friendsState + 1
+        }));
+    };
 
     const setFirstTime = (value) => {
         if (!user) return;
@@ -168,6 +212,24 @@ export const UserProvider = ({ children }) => {
             updateUser(user.telegram_id, { is_first_time: value ? 1 : 0 });
         }
     };
+
+    const setFriendsFirstTime = (value) => {
+        if (!user) return;
+        
+        // Update local state
+        setUser((prevUser) => ({
+            ...prevUser,
+            is_frens_first_time: value
+        }));
+        
+        // Update database
+        if (user.telegram_id) {
+            updateUser(user.telegram_id, { is_frens_first_time: value ? 1 : 0 });
+        }
+    };
+
+
+
 
     // Spin function migrated from UserStoreProvider
     const useSpin = () => {
@@ -230,8 +292,11 @@ export const UserProvider = ({ children }) => {
             // New tour and spin functions
             workWithTour,
             setFirstTime,
+            workWithFriendsTour,
+            setFriendsFirstTime,
             useSpin,
-            checkDailySpins
+            checkDailySpins,
+            getReferredUsernames
         }}>
             {children}
         </UserContext.Provider>

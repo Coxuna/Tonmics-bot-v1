@@ -14,6 +14,7 @@ const FarmPage = () => {
   const [upperLevel, setUpperLevel] = useState(2);
   const [lowerLevel, setLowerLevel] = useState(1);
   const [claimAmountPerSecond, setClaimAmountPerSecond] = useState(0.00346);
+  const actionInProgressRef = useRef(false);
   const [farmStatus, setFarmStatus] = useState({
     stage: 'initial', // can be 'initial', 'farming', 'farmed', 'claim_available'
     startTime: null,
@@ -22,9 +23,9 @@ const FarmPage = () => {
 
   const intervalRef = useRef(null);
 
-  // Configurable farming settings
-  const FARM_INTERVAL = 4 *60 * 60 * 1000; // 1 minute farming duration for testing
-  const CLAIM_DURATION = 10 * 60 * 1000; // 1 minute claim duration for testing
+  // Configurable farming settings - 4 hours for farming, 10 minutes for claiming
+  const FARM_INTERVAL = 4  * 60 * 60 * 1000; // 4 hours farming duration
+  const CLAIM_DURATION = 15 * 60 * 1000; // 10 minutes claim duration
 
   // Dynamic level calculation function
   const calculateLevelThreshold = (level) => {
@@ -40,19 +41,22 @@ const FarmPage = () => {
     };
   };
 
-  // Calculate dynamic claim amount per second based on level
+  // Calculate dynamic claim amount per second based on level - FIX: ensure this returns the expected small value
   const calculateClaimAmountPerSecond = (level = lowerLevel) => {
+    // Base value is 0.00346
     return 0.00346 * Math.pow(1.1, level - 1);
   };
 
   // Improved time formatting function
   const formatTimeRemaining = (ms) => {
+    if (ms <= 0) return "0H 00M 00S";
+    
     const totalSeconds = Math.floor(ms / 1000);
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
 
-    const formattedHours = hours.toString().padStart(1, '0');
+    const formattedHours = hours.toString();
     const formattedMinutes = minutes.toString().padStart(2, '0');
     const formattedSeconds = seconds.toString().padStart(2, '0');
 
@@ -64,7 +68,7 @@ const FarmPage = () => {
     let currentLevel = 1;
     let levelInfo = calculateLevelThreshold(currentLevel);
 
-    while (points >= levelInfo.end) {
+    while (points >= levelInfo.end && currentLevel < 100) { // Add max level check
       currentLevel++;
       levelInfo = calculateLevelThreshold(currentLevel);
     }
@@ -81,104 +85,52 @@ const FarmPage = () => {
     };
   };
 
-  // Restore or initialize farming state on component mount
-  useEffect(() => {
-    if (user) {
-      const currentTime = Date.now();
-      
-      // Check if there's a saved farming state
-      if (user.farming_stage && user.farming_stage !== 'initial') {
-        const savedStartTime = user.farming_start_time 
-          ? new Date(user.farming_start_time).getTime() 
-          : null;
-        
-        // Determine appropriate interval based on saved stage
-        const interval = user.farming_stage === 'farming' 
-          ? FARM_INTERVAL 
-          : CLAIM_DURATION;
-        
-        // Calculate elapsed time
-        const elapsedTime = savedStartTime 
-          ? currentTime - savedStartTime 
-          : 0;
-        
-        // Calculate accumulated amount if in farming stage
-        const accumulatedAmount = user.farming_stage === 'farming'
-          ? Math.min(
-              calculateClaimAmountPerSecond() * (elapsedTime / 1000), 
-              calculateClaimAmountPerSecond() * (FARM_INTERVAL / 1000)
-            )
-          : parseFloat(user.accumulated_amount || 0);
-        
-        // Determine the state based on elapsed time
-        if (elapsedTime >= interval) {
-          // Interval has expired, move to next stage or reset
-          if (user.farming_stage === 'farming') {
-            // Farming interval expired, move to 'farmed' state
-            setFarmStatus({
-              stage: 'farmed',
-              startTime: savedStartTime + FARM_INTERVAL,
-              timeRemaining: CLAIM_DURATION
-            });
-            
-            setAmountToClaim(accumulatedAmount);
-            
-            // Update user state to reflect 'farmed' status
-            updateUser(user.telegram_id, {
-              farming_stage: 'farmed',
-              farming_start_time: new Date(savedStartTime + FARM_INTERVAL).toISOString().replace("T", " ").split(".")[0],
-              farming_time_remaining: CLAIM_DURATION,
-              accumulated_amount: accumulatedAmount,
-              last_farming_update: new Date().toISOString().replace("T", " ").split(".")[0]
-            });
-            
-            // Start claim countdown
-            startClaimCountdown(savedStartTime + FARM_INTERVAL, accumulatedAmount);
-          } else if (user.farming_stage === 'farmed') {
-            // Claim duration has expired, reset to initial state
-            updateUser(user.telegram_id, {
-              farming_stage: 'initial',
-              farming_start_time: null,
-              farming_time_remaining: 0,
-              accumulated_amount: 0,
-              last_farming_update: new Date().toISOString().replace("T", " ").split(".")[0]
-            });
-            
-            // Reset local state
-            setFarmStatus({
-              stage: 'initial',
-              startTime: null,
-              timeRemaining: 0
-            });
-            setAmountToClaim(0);
-          }
-        } else {
-          // Interval not yet expired, restore previous state
-          const remainingTime = Math.max(interval - elapsedTime, 0);
-          
-          // Set farm status and accumulated amount
-          setFarmStatus({
-            stage: user.farming_stage,
-            startTime: savedStartTime,
-            timeRemaining: remainingTime
-          });
-          
-          setAmountToClaim(accumulatedAmount);
-          
-          // Restart appropriate countdown based on stage
-          if (user.farming_stage === 'farming') {
-            startFarmingCountdown(savedStartTime, accumulatedAmount);
-          } else if (user.farming_stage === 'farmed') {
-            startClaimCountdown(savedStartTime, accumulatedAmount);
-          }
-        }
+  // Helper function to safely parse timestamp from database
+  const parseStoredTimestamp = (storedTime) => {
+    if (!storedTime) return null;
+    
+    // If it's already a number, return it
+    if (typeof storedTime === 'number') return storedTime;
+    
+    try {
+      // If it's an ISO string
+      if (typeof storedTime === 'string' && storedTime.includes('T')) {
+        return new Date(storedTime).getTime();
       }
+      
+      // If it's a formatted date string
+      const dateStr = storedTime.includes('T') ? storedTime : storedTime.replace(' ', 'T');
+      // Add Z to ensure UTC interpretation if not already present
+      const utcDateStr = dateStr.endsWith('Z') ? dateStr : `${dateStr}Z`;
+      return new Date(utcDateStr).getTime();
+    } catch (error) {
+      console.error("Error parsing timestamp:", error);
+      return null;
     }
-  }, [user]);
+  };
 
-  // Start farming countdown
-  const startFarmingCountdown = (startTime = Date.now(), initialAmount = 0) => {
-    // Clear existing intervals
+  // Helper function to reset to initial state
+  const resetToInitialState = () => {
+    console.log("Resetting to initial state");
+    if (user) {
+      updateUser(user.telegram_id, {
+        farming_stage: 'initial',
+        farming_start_time: null,
+        farming_time_remaining: 0,
+        accumulated_amount: 0,
+        last_farming_update: Date.now()
+      });
+    }
+    
+    // Reset local state
+    setFarmStatus({
+      stage: 'initial',
+      startTime: null,
+      timeRemaining: 0
+    });
+    setAmountToClaim(0);
+    
+    // Clear any running intervals
     if (intervalRef.current) {
       if (Array.isArray(intervalRef.current)) {
         intervalRef.current.forEach(interval => {
@@ -187,85 +139,260 @@ const FarmPage = () => {
       } else {
         clearInterval(intervalRef.current);
       }
+      intervalRef.current = null;
+    }
+  };
+
+  // Restore or initialize farming state on component mount
+  useEffect(() => {
+    if (!user || actionInProgressRef.current) return;
+    
+    console.log("User data loaded:", user);
+    console.log("Current farming stage:", user.farming_stage);
+    console.log("Current farming start time:", user.farming_start_time);
+
+    const currentTime = Date.now();
+    
+    // Check if there's a saved farming state
+    if (user.farming_stage && user.farming_stage !== 'initial') {
+      const savedStartTime = parseStoredTimestamp(user.farming_start_time);
+      
+      console.log("Retrieved start time:", user.farming_start_time);
+      console.log("Parsed start time:", savedStartTime, savedStartTime ? new Date(savedStartTime).toISOString() : 'Invalid');
+      
+      if (!savedStartTime) {
+        // Invalid start time, reset to initial
+        console.error("Invalid start time, resetting to initial state");
+        resetToInitialState();
+        return;
+      }
+
+      // Determine appropriate interval based on saved stage
+      const interval = user.farming_stage === 'farming' 
+        ? FARM_INTERVAL 
+        : CLAIM_DURATION;
+      
+      // Calculate elapsed time
+      const elapsedTime = currentTime - savedStartTime;
+      console.log("Elapsed time since start:", elapsedTime, "ms");
+      
+      // Calculate accumulated amount if in farming stage
+      let accumulatedAmount = 0;
+      if (user.farming_stage === 'farming') {
+        // Calculate based on elapsed time, capped at maximum farming amount
+        const claimRate = calculateClaimAmountPerSecond();
+        accumulatedAmount = Math.min(
+          claimRate * (elapsedTime / 1000), 
+          claimRate * (FARM_INTERVAL / 1000)
+        );
+        console.log("Calculated accumulated amount:", accumulatedAmount);
+      } else if (user.accumulated_amount) {
+        // Use stored amount for farmed state
+        accumulatedAmount = parseFloat(user.accumulated_amount);
+        console.log("Using stored accumulated amount:", accumulatedAmount);
+      }
+      
+      // Determine the state based on elapsed time
+      if (elapsedTime >= interval) {
+        console.log("Interval has expired. Current stage:", user.farming_stage);
+        // Interval has expired, move to next stage or reset
+        if (user.farming_stage === 'farming') {
+          // Farming interval expired, check if claim period has also expired
+          const farmEndTime = savedStartTime + FARM_INTERVAL;
+          const claimElapsedTime = currentTime - farmEndTime;
+          
+          // Calculate final accumulated amount for farming completion
+          const finalAccumulatedAmount = calculateClaimAmountPerSecond() * (FARM_INTERVAL / 1000);
+          console.log("Final accumulated amount:", finalAccumulatedAmount);
+          
+          if (claimElapsedTime >= CLAIM_DURATION) {
+            // Both farming and claim periods have expired, reset to initial
+            console.log("Both farming and claim periods expired");
+            resetToInitialState();
+          } else {
+            // Only farming period expired, move to claim state
+            console.log("Farming period expired, entering claim state");
+            const remainingClaimTime = CLAIM_DURATION - claimElapsedTime;
+            
+            setFarmStatus({
+              stage: 'farmed',
+              startTime: farmEndTime,
+              timeRemaining: remainingClaimTime
+            });
+            
+            setAmountToClaim(finalAccumulatedAmount);
+            
+            // Update user state to reflect 'farmed' status
+            updateUser(user.telegram_id, {
+              farming_stage: 'farmed',
+              farming_start_time: farmEndTime,
+              farming_time_remaining: remainingClaimTime,
+              accumulated_amount: finalAccumulatedAmount,
+              last_farming_update: currentTime
+            });
+            
+            // Start claim countdown with the correct remaining time
+            startClaimCountdown(farmEndTime, finalAccumulatedAmount);
+          }
+        } else if (user.farming_stage === 'farmed') {
+          // Claim duration has expired, reset to initial state
+          console.log("Claim duration expired, resetting to initial state");
+          resetToInitialState();
+        }
+      } else {
+        // Interval not yet expired, restore previous state
+        const remainingTime = Math.max(interval - elapsedTime, 0);
+        console.log("Interval not expired. Remaining time:", remainingTime);
+        
+        // Set farm status and accumulated amount
+        setFarmStatus({
+          stage: user.farming_stage,
+          startTime: savedStartTime,
+          timeRemaining: remainingTime
+        });
+        
+        setAmountToClaim(accumulatedAmount);
+        
+        // Restart appropriate countdown based on stage
+        if (user.farming_stage === 'farming') {
+          console.log("Resuming farming countdown");
+          startFarmingCountdown(savedStartTime, accumulatedAmount);
+        } else if (user.farming_stage === 'farmed') {
+          console.log("Resuming claim countdown");
+          startClaimCountdown(savedStartTime, accumulatedAmount);
+        }
+      }
+    } else {
+      console.log("No saved farming state or in initial state");
+      // No saved state or in initial state
+      resetToInitialState();
+    }
+  }, [user]);
+
+  // Start farming countdown - FIXED version
+  const startFarmingCountdown = (startTime = Date.now(), initialAmount = 0) => {
+    console.log("Starting farming countdown from:", new Date(startTime).toISOString());
+    console.log("Initial amount:", initialAmount);
+    
+    // Store a fixed reference to the start time
+    const fixedStartTime = startTime;
+    
+    // Clear existing intervals
+    if (intervalRef.current) {
+      if (Array.isArray(intervalRef.current)) {
+        intervalRef.current.forEach(interval => interval && clearInterval(interval));
+      } else {
+        clearInterval(intervalRef.current);
+      }
     }
 
-    // Set initial farm status
+    // Update farm status with fixed start time
     setFarmStatus({
       stage: 'farming',
-      startTime: startTime,
-      timeRemaining: FARM_INTERVAL
+      startTime: fixedStartTime,
+      timeRemaining: Math.max(0, fixedStartTime + FARM_INTERVAL - Date.now())
     });
 
-    let accumulatedAmount = initialAmount;
+    // Calculate and format remaining time
+    const timeRemainingMs = Math.max(0, fixedStartTime + FARM_INTERVAL - Date.now());
+    const hours = Math.floor(timeRemainingMs / 3600000);
+    const minutes = Math.floor((timeRemainingMs % 3600000) / 60000);
+    const seconds = Math.floor((timeRemainingMs % 60000) / 1000);
 
-    // Start accumulating amount
+    // Debugging logs with fixed start time
+    console.log("Fixed Start Time:", new Date(fixedStartTime).toISOString());
+    console.log("FARM_INTERVAL (ms):", FARM_INTERVAL);
+    console.log("Current Time:", new Date().toISOString());
+    console.log("Expected End Time:", new Date(fixedStartTime + FARM_INTERVAL).toISOString());
+    console.log(`Initial Time Remaining: ${hours}h ${minutes}m ${seconds}s (${timeRemainingMs} ms)`);
+
+    let accumulatedAmount = initialAmount;
+    const claimRate = calculateClaimAmountPerSecond(); // Get claim rate
+
+    // Start accumulating claimable amount
     const accumulationIntervalId = setInterval(() => {
-      const newAmount = accumulatedAmount + calculateClaimAmountPerSecond();
-      const cappedAmount = Math.min(
-        newAmount, 
-        calculateClaimAmountPerSecond() * (FARM_INTERVAL / 1000)
+      const elapsedSeconds = Math.min(
+        (Date.now() - fixedStartTime) / 1000,
+        FARM_INTERVAL / 1000
       );
       
-      accumulatedAmount = parseFloat(cappedAmount.toFixed(4));
-      setAmountToClaim(accumulatedAmount);
+      // Calculate accumulated amount based on elapsed time
+      accumulatedAmount = claimRate * elapsedSeconds;
+      setAmountToClaim(parseFloat(accumulatedAmount.toFixed(8))); // More precision
     }, 1000);
 
-    // Periodic state save interval
+    // Save farming state periodically
     const stateSaveInterval = setInterval(() => {
       if (user) {
         updateUser(user.telegram_id, {
           farming_stage: 'farming',
-          farming_start_time: new Date(startTime).toISOString().replace("T", " ").split(".")[0],
-          farming_time_remaining: FARM_INTERVAL,
+          farming_start_time: fixedStartTime,
+          farming_time_remaining: Math.max(0, fixedStartTime + FARM_INTERVAL - Date.now()),
           accumulated_amount: accumulatedAmount,
-          last_farming_update: new Date().toISOString().replace("T", " ").split(".")[0]
+          last_farming_update: Date.now()
         });
       }
-    }, 30000); // Save every 30 seconds
+    }, 30000); // Save every 30 sec
 
     // Countdown interval
-    intervalRef.current = [
-      setInterval(() => {
-        setFarmStatus(prev => {
-          const newTimeRemaining = startTime + FARM_INTERVAL - Date.now();
-          
-          if (newTimeRemaining <= 0) {
-            // Farming duration finished
-            clearInterval(intervalRef.current[0]);
-            clearInterval(accumulationIntervalId);
-            clearInterval(stateSaveInterval);
-            
-            // Save final state
-            if (user) {
-              updateUser(user.telegram_id, {
-                farming_stage: 'farmed',
-                farming_start_time: new Date().toISOString().replace("T", " ").split(".")[0],
-                farming_time_remaining: CLAIM_DURATION,
-                accumulated_amount: accumulatedAmount,
-                last_farming_update: new Date().toISOString().replace("T", " ").split(".")[0]
-              });
-            }
-            
-            return {
-              stage: 'farmed',
-              startTime: Date.now(),
-              timeRemaining: CLAIM_DURATION
-            };
-          }
-          
-          return {
-            ...prev,
-            timeRemaining: newTimeRemaining
-          };
+    const countdownInterval = setInterval(() => {
+      const newTimeRemaining = Math.max(0, fixedStartTime + FARM_INTERVAL - Date.now());
+
+      if (newTimeRemaining <= 0) {
+        // Farming finished
+        clearInterval(countdownInterval);
+        clearInterval(accumulationIntervalId);
+        clearInterval(stateSaveInterval);
+
+        const farmEndTime = fixedStartTime + FARM_INTERVAL;
+        const finalAccumulatedAmount = claimRate * (FARM_INTERVAL / 1000);
+
+        console.log("Farming finished. Moving to claim state.");
+        console.log("Final accumulated amount:", finalAccumulatedAmount);
+
+        // Save final state
+        if (user) {
+          updateUser(user.telegram_id, {
+            farming_stage: 'farmed',
+            farming_start_time: farmEndTime,
+            farming_time_remaining: CLAIM_DURATION,
+            accumulated_amount: finalAccumulatedAmount,
+            last_farming_update: Date.now()
+          });
+        }
+
+        // Update state to "farmed"
+        setFarmStatus({
+          stage: 'farmed',
+          startTime: farmEndTime,
+          timeRemaining: CLAIM_DURATION
         });
-      }, 1000),
-      stateSaveInterval,
-      accumulationIntervalId
-    ];
+        
+        setAmountToClaim(finalAccumulatedAmount);
+
+        // Start claim countdown
+        startClaimCountdown(farmEndTime, finalAccumulatedAmount);
+      } else {
+        // Update countdown time
+        setFarmStatus(prev => ({
+          ...prev,
+          timeRemaining: newTimeRemaining
+        }));
+      }
+    }, 1000);
+
+    // Store intervals in `intervalRef`
+    intervalRef.current = [countdownInterval, stateSaveInterval, accumulationIntervalId];
   };
 
-  // Start claim countdown
+  // Start claim countdown - FIXED version
   const startClaimCountdown = (startTime = Date.now(), savedAmount = 0) => {
+    console.log("Starting claim countdown from:", new Date(startTime).toISOString());
+    console.log("Amount to claim:", savedAmount);
+    
+    // Store a fixed reference to the start time
+    const fixedStartTime = startTime;
+    
     // Clear any existing interval
     if (intervalRef.current) {
       if (Array.isArray(intervalRef.current)) {
@@ -277,128 +404,146 @@ const FarmPage = () => {
       }
     }
 
+    // Calculate remaining claim time
+    const remainingClaimTime = Math.max(0, fixedStartTime + CLAIM_DURATION - Date.now());
+
     // Set farm status to claim stage
     setFarmStatus({
       stage: 'farmed',
-      startTime: startTime,
-      timeRemaining: CLAIM_DURATION
+      startTime: fixedStartTime,
+      timeRemaining: remainingClaimTime
     });
 
     setAmountToClaim(savedAmount);
+    
+    console.log("Claim Start Time:", new Date(fixedStartTime).toISOString());
+    console.log("Current Time:", new Date().toISOString());
+    console.log("Expected Claim End Time:", new Date(fixedStartTime + CLAIM_DURATION).toISOString());
+    console.log("Remaining Claim Time:", remainingClaimTime);
 
     // Periodic state save interval
     const stateSaveInterval = setInterval(() => {
       if (user) {
+        const timeRemaining = Math.max(0, fixedStartTime + CLAIM_DURATION - Date.now());
         updateUser(user.telegram_id, {
           farming_stage: 'farmed',
-          farming_start_time: new Date(startTime).toISOString().replace("T", " ").split(".")[0],
-          farming_time_remaining: CLAIM_DURATION,
+          farming_start_time: fixedStartTime,
+          farming_time_remaining: timeRemaining,
           accumulated_amount: savedAmount,
-          last_farming_update: new Date().toISOString().replace("T", " ").split(".")[0]
+          last_farming_update: Date.now()
         });
       }
     }, 30000); // Save every 30 seconds
 
+    // If claim period already expired, reset immediately
+    if (remainingClaimTime <= 0) {
+      console.log("Claim period already expired");
+      clearInterval(stateSaveInterval);
+      resetToInitialState();
+      return;
+    }
+
     // Countdown interval
-    intervalRef.current = [
-      setInterval(() => {
-        setFarmStatus(prev => {
-          const newTimeRemaining = startTime + CLAIM_DURATION - Date.now();
-          
-          if (newTimeRemaining <= 0) {
-            // Claim duration finished
-            clearInterval(intervalRef.current[0]);
-            clearInterval(stateSaveInterval);
-            
-            // Reset state in database
-            if (user) {
-              updateUser(user.telegram_id, {
-                farming_stage: 'initial',
-                farming_start_time: null,
-                farming_time_remaining: 0,
-                accumulated_amount: 0,
-                last_farming_update: new Date().toISOString().replace("T", " ").split(".")[0]
-              });
-            }
-            
-            // Reset local state
-            setAmountToClaim(0);
-            
-            return {
-              stage: 'initial',
-              startTime: null,
-              timeRemaining: 0
-            };
-          }
-          
-          return {
-            ...prev,
-            timeRemaining: newTimeRemaining
-          };
-        });
-      }, 1000),
-      stateSaveInterval
-    ];
+    const countdownInterval = setInterval(() => {
+      const newTimeRemaining = Math.max(0, fixedStartTime + CLAIM_DURATION - Date.now());
+      
+      if (newTimeRemaining <= 0) {
+        // Claim duration finished
+        clearInterval(countdownInterval);
+        clearInterval(stateSaveInterval);
+        
+        // Reset to initial state
+        console.log("Claim period has expired - resetting to initial state");
+        resetToInitialState();
+      } else {
+        // Update countdown
+        setFarmStatus(prev => ({
+          ...prev,
+          timeRemaining: newTimeRemaining
+        }));
+      }
+    }, 1000);
+    
+    intervalRef.current = [countdownInterval, stateSaveInterval];
   };
 
   // Handle button click
   const handleButtonClick = () => {
+    actionInProgressRef.current = true;
     switch (farmStatus.stage) {
       case 'initial':
         // Start farming
         if (!user) return;
   
         // Immediately update database to farming state
+        const startTime = Date.now();
+        console.log("Starting new farming session at:", new Date(startTime).toISOString());
+        
         updateUser(user.telegram_id, {
           farming_stage: 'farming',
-          farming_start_time: new Date().toISOString().replace("T", " ").split(".")[0],
+          farming_start_time: startTime,
           farming_time_remaining: FARM_INTERVAL,
           accumulated_amount: 0,
-          last_farming_update: new Date().toISOString().replace("T", " ").split(".")[0]
+          last_farming_update: startTime
         });
   
         // Start farming countdown
-        startFarmingCountdown();
+        startFarmingCountdown(startTime);
         break;
+        
       case 'farming':
         // Cannot interact during farming
+        console.log("Cannot interact during farming");
         break;
+        
       case 'farmed':
         // Claim the amount
         if (!user) return;
+        
+        console.log("Claiming amount:", amountToClaim);
         const roundedAmountToClaim = parseFloat(amountToClaim.toFixed(2));
         const updatedPoints = parseFloat(
-            (Number(user.tms_points) + roundedAmountToClaim).toFixed(2)
+          (Number(user.tms_points || 0) + roundedAmountToClaim).toFixed(2)
         );
+        
+        console.log("Current points:", user.tms_points);
+        console.log("New total points:", updatedPoints);
         
         // Prepare update data
         const updateData = {
           tms_points: updatedPoints,
-          last_claim: new Date().toISOString().replace("T", " ").split(".")[0],
+          last_claim: Date.now(),
           farming_stage: 'initial',
           farming_start_time: null,
           farming_time_remaining: 0,
           accumulated_amount: 0,
-          last_farming_update: new Date().toISOString().replace("T", " ").split(".")[0]
+          last_farming_update: Date.now()
         };
         
         updateUser(user.telegram_id, updateData);
   
         // Reset local state
-        setAmountToClaim(0);
-        setFarmStatus({
-          stage: 'initial',
-          startTime: null,
-          timeRemaining: 0
-        });
+        // Reset local state
+    setFarmStatus({
+      stage: 'initial',
+      startTime: null,
+      timeRemaining: 0
+    });
+    setAmountToClaim(0);
+    
         break;
     }
+
+    setTimeout(() => {
+      actionInProgressRef.current = false;
+    }, 100); // Small delay to ensure state updates complete
   };
 
   // Level and points update
   useEffect(() => {
+    if (!user || actionInProgressRef.current) return;
     if (user) {
-      const points = user.tms_points || 0;
+      const points = parseFloat(user.tms_points || 0);
       setUserPoints(points);
 
       const { lowerLevel, upperLevel, progressPercentage } = calculateLevelProgress(points);
@@ -407,6 +552,7 @@ const FarmPage = () => {
       setUpperLevel(upperLevel);
       setLowerLevel(lowerLevel);
 
+      // Update claim rate based on level
       const newClaimAmount = calculateClaimAmountPerSecond(lowerLevel);
       setClaimAmountPerSecond(newClaimAmount);
     }
@@ -427,7 +573,7 @@ const FarmPage = () => {
     };
   }, []);
 
-  if (!user) return null;
+  if (!user || actionInProgressRef.current) return;
 
   // Determine status text based on farm stage
   const getStatusText = () => {
@@ -437,7 +583,7 @@ const FarmPage = () => {
       case 'farming':
         return 'Filling in progress';
       case 'farmed':
-        return 'Farmed Point Resets in';
+        return 'Unclaimed Points Resets in';
       default:
         return 'Ready to Farm';
     }

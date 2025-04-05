@@ -283,6 +283,15 @@ const JumbleJestersGame = () => {
   const [validatingWords, setValidatingWords] = useState(false)
   const [letters, setLetters] = useState([])
   const [autoLevelAdvanceScheduled, setAutoLevelAdvanceScheduled] = useState(false);
+  const [trialsUsed, setTrialsUsed] = useState(null);
+
+  const [freeTrials, setFreeTrials] = useState(null);
+  const [purchasedTrials, setPurchasedTrials] = useState(null);
+  const [availableTrials, setAvailableTrials] = useState(null);
+const [lastTrialTime, setLastTrialTime] = useState(null); // Track when free trials were used up
+const [trialCountdown, setTrialCountdown] = useState(""); // For timer display
+const timerStarted = useRef(false);
+const [totalTrials, setTotalTrials] = useState(3); 
   // Add these near your other state definitions
 const gridRef = useRef([]);
 const currentLevelWordsRef = useRef([]);
@@ -300,30 +309,109 @@ useEffect(() => {
   levelRef.current = level;
 }, [level]);
 
-// Add useEffect to update states when user data changes
-    useEffect(() => {
-    if (user && user.telegram_id) {
-      // Make sure user is actually loaded with proper data
-      console.log("Setting user hint/shuffle data:", user.hint_count, user.shuffle_count)
+useEffect(() => {
+  if (user && user.telegram_id) {
+    // Make sure user is actually loaded with proper data
+    console.log("Setting user hint/shuffle data:", user.hint_count, user.shuffle_count);
 
-      // Fix: Make sure we properly handle different data types
-      // Some databases might return strings instead of numbers
-      const hintCount = user.hint_count !== undefined && user.hint_count !== null ? Number(user.hint_count) : 0
+    // Fix: Make sure we properly handle different data types
+    // Some databases might return strings instead of numbers
+    const hintCount = user.hint_count !== undefined && user.hint_count !== null ? Number(user.hint_count) : 0;
+    const shuffleCount = user.shuffle_count !== undefined && user.shuffle_count !== null ? Number(user.shuffle_count) : 0;
+   
+    setHintsUsed(hintCount);
+    setShufflesUsed(shuffleCount);
 
-      const shuffleCount =
-        user.shuffle_count !== undefined && user.shuffle_count !== null ? Number(user.shuffle_count) : 0
-
-      setHintsUsed(hintCount)
-      setShufflesUsed(shuffleCount)
-
-      // Set timestamps for last hint/shuffle
-      setLastHintTime(user.last_hint || null)
-      setLastShuffleTime(user.last_shuffle || null)
-
-      // If you want to see the updated values, use another useEffect that watches these states
+    // Set timestamps for last hint/shuffle
+    setLastHintTime(user.last_hint || null);
+    setLastShuffleTime(user.last_shuffle || null);
+    
+    // Parse the stored timestamp correctly
+    if (user.last_jumbo === null || user.last_jumbo === undefined) {
+      setLastTrialTime(null);
+    } else {
+      // Parse the stored timestamp correctly if not null
+      const parsedLastJumbo = parseStoredTimestamp(user.last_jumbo);
+      setLastTrialTime(parsedLastJumbo);
     }
-  }, [user])
+  }
+}, [user]);
 
+// Add this useEffect to initialize the trial counts when user data loads
+useEffect(() => {
+  if (user && user.telegram_id) {
+    // Get trial counts from user data
+    const freeTr = user.free_trials !== undefined ? Number(user.free_trials) : 0;
+    const purchasedTr = user.purchased_trials !== undefined ? Number(user.purchased_trials) : 0;
+    
+    // Set the states
+    setFreeTrials(freeTr);
+
+    setPurchasedTrials(purchasedTr);
+    setAvailableTrials(freeTr + purchasedTr);
+    
+    // Also set last trial time if it exists
+    
+  }
+}, [user]);
+
+useEffect(() => {
+  if (!user) {
+    // Don't run the timer until we have proper data
+    return;
+  }
+
+  // Only start timer if lastTrialTime exists
+  if (lastTrialTime) {
+    const checkAndUpdateTimer = () => {
+      const now = Date.now();
+      const timeElapsed = now - lastTrialTime;
+      const timeRemaining = 24 *60 * 60 * 1000 - timeElapsed;
+      console.log(timeRemaining);
+      
+      if (timeRemaining <= 0) {
+        // Reset only the free trials to 3
+        const newFreeTrials = 3;
+        const totalTrials = newFreeTrials + (purchasedTrials || 0);
+        
+        setFreeTrials(newFreeTrials);
+        setAvailableTrials(totalTrials);
+        setLastTrialTime(null);
+        setTrialCountdown("");
+        
+        // Update both fields in the database
+        updateUser(user?.telegram_id, { 
+          free_trials: newFreeTrials, 
+          purchased_trials: purchasedTrials,
+          last_jumbo: null 
+        });
+      } else {
+        // Update countdown display with hours, minutes, and seconds
+        const hours = Math.floor(timeRemaining / (60 * 60 * 1000));
+        const minutes = Math.floor((timeRemaining % (60 * 60 * 1000)) / (60 * 1000));
+        const seconds = Math.floor((timeRemaining % (60 * 1000)) / 1000);
+        
+        // Format with leading zeros for better readability
+        const formattedHours = String(hours).padStart(2, '0');
+        const formattedMinutes = String(minutes).padStart(2, '0');
+        const formattedSeconds = String(seconds).padStart(2, '0');
+        
+        setTrialCountdown(`${formattedHours}h ${formattedMinutes}m ${formattedSeconds}s`);
+      }
+    };
+    
+    // Initial check
+    checkAndUpdateTimer();
+    
+    // Set interval to update every second
+    const interval = setInterval(checkAndUpdateTimer, 1000);
+    
+    return () => clearInterval(interval);
+  } else {
+    // Clear any countdown if lastTrialTime is null
+    setTrialCountdown("");
+  }
+}, [lastTrialTime, user, purchasedTrials]); // Remove freeTrials and purchasedTrials from dependencies
   // Add this useEffect to see when the state values actually change
   useEffect(() => {
     if (shufflesUsed !== null) {
@@ -344,20 +432,42 @@ useEffect(() => {
     }
   }, [user, currentLevelWords])
   // In the setupGame function after setting the timer
-useEffect(() => {
+  useEffect(() => {
+    console.log("Timer value changed:", timer);
+  }, [timer]);
+  
+  useEffect(() => {
+    console.log("Timer interval changed:", timerInterval);
+    return () => {
+      if (timerInterval) {
+        console.log("Cleaning up timer interval on effect cleanup");
+        clearInterval(timerInterval);
+      }
+    };
+  }, [timerInterval]);
 
-}, [timer]);
-
-// Add this to your component:
-useEffect(() => {
-  // Log timer state changes
-
-}, [timer]);
-
-// Log interval changes
-useEffect(() => {
- 
-}, [timerInterval]);
+  const parseStoredTimestamp = (storedTime) => {
+    if (!storedTime) return null;
+    
+    // If it's already a number, return it
+    if (typeof storedTime === 'number') return storedTime;
+    
+    try {
+      // If it's an ISO string
+      if (typeof storedTime === 'string' && storedTime.includes('T')) {
+        return new Date(storedTime).getTime();
+      }
+      
+      // If it's a formatted date string
+      const dateStr = storedTime.includes('T') ? storedTime : storedTime.replace(' ', 'T');
+      // Add Z to ensure UTC interpretation if not already present
+      const utcDateStr = dateStr.endsWith('Z') ? dateStr : `${dateStr}Z`;
+      return new Date(utcDateStr).getTime();
+    } catch (error) {
+      console.error("Error parsing timestamp:", error);
+      return null;
+    }
+  }; 
 const formatCountdown = (timeInMs) => {
   if (timeInMs <= 0) return "00:00:00"
 
@@ -384,7 +494,7 @@ useEffect(() => {
     if (hintsUsed >= 3 && lastHintTime) {
       // For testing: 1 minute (60000 ms)
       // For production: 24 hours (24 * 60 * 60 * 1000)
-      const resetTime = 0.1 * 60 * 1000 // 24 hours
+      const resetTime = 24 * 60 * 60 * 1000 // 24 hours
       const hintResetAt = new Date(lastHintTime).getTime() + resetTime
       const timeLeft = hintResetAt - now
 
@@ -404,7 +514,7 @@ useEffect(() => {
 
     // Calculate shuffle countdown if user has used all free shuffles
     if (shufflesUsed >= 3 && lastShuffleTime) {
-      const resetTime = 0.1 * 60 * 1000 // 24 hours
+      const resetTime = 24 * 60 * 60 * 1000 // 24 hours
       const shuffleResetAt = new Date(lastShuffleTime).getTime() + resetTime
       const timeLeft = shuffleResetAt - now
 
@@ -439,6 +549,8 @@ useEffect(() => {
     loadWords()
   }
 }, [level, gameStarted])
+
+
 
 // Function to load words from API
 const loadWords = async () => { 
@@ -697,18 +809,40 @@ const setupGame = (words) => {
   }
   
   // Calculate final timer
-  let roundTimer = Math.ceil(baseTime * levelMultiplier);
+ // Calculate final timer
+ let roundTimer = Math.ceil(baseTime * levelMultiplier);
   
-  // Ensure timer stays within reasonable bounds
-  roundTimer = Math.max(15, Math.min(60, roundTimer));
-  
-  setTimer(roundTimer);
-  setTimeout(() => {
-    startTimer();
-  }, 100);
+ // Ensure timer stays within reasonable bounds
+ roundTimer = Math.max(15, Math.min(60, roundTimer));
+ 
+ // IMPORTANT: Clear any existing timer before setting a new one
+ if (timerInterval) {
+   clearInterval(timerInterval);
+   setTimerInterval(null);
+ }
+ 
+ setTimer(roundTimer);
+ 
+ // Check if timer is already started to prevent multiple timer starts
+ if (!timerStarted.current) {
+   timerStarted.current = true;
+   setTimeout(() => {
+     startTimer();
+     // Reset the flag after timer is started
+     timerStarted.current = false;
+   }, 100);
+ }
 };
   // Initialize game
-  const initializeGame = () => {
+const initializeGame = async() => {
+
+   // Try to use a trial
+   const success = await useOneTrial();
+   if (!success) {
+     return; // Don't restart game if no trials available
+   }
+
+  
   // Double-check that we have the user data before starting
   if (user && hintsUsed === null) {
     setHintsUsed(typeof user.hint_count === "number" ? user.hint_count : 0);
@@ -738,62 +872,59 @@ const setupGame = (words) => {
   loadWords();
   };
   
-  // Clear timer when component unmounts
-  useEffect(() => {
-    return () => {
-      if (timerInterval) clearInterval(timerInterval)
-    }
-  }, [timerInterval])
+ 
   
   // Timer logic
   const startTimer = () => {
-    // First, ALWAYS clear any existing timer to avoid multiple timers
+    // Always clear existing interval first
     if (timerInterval) {
-      console.log("Clearing existing timer interval:", timerInterval);
       clearInterval(timerInterval);
       setTimerInterval(null);
     }
-  
+    
+    // Add a check to prevent starting a timer if one is already running
+    if (timerInterval !== null) {
+      console.log("Timer already running, not starting a new one");
+      return;
+    }
+    
     console.log("Starting new timer from:", timer);
     
     const interval = setInterval(() => {
       setTimer((prevTime) => {
-        // Log to debug timer decrement
-        console.log("Timer tick:", prevTime, "->", prevTime - 1);
-        
-        // Check if submit is in progress
         if (isSubmitting) {
-          return prevTime; // Keep time frozen during submission
+          return prevTime; // Pause timer during submission
         }
-        
-        // Check if timer is about to reach zero
+  
         if (prevTime <= 1) {
-          // Clear interval immediately to prevent duplicate calls
           clearInterval(interval);
-          // Call handleTimeUp outside the state update
-          setTimeout(() => handleTimeUp(), 0);
+          setTimerInterval(null);
+          if (!isSubmitting) {
+            setTimeout(() => handleTimeUp(), 0);
+          }
           return 0;
         }
         return prevTime - 1;
       });
     }, 1000);
-  
-    // Store interval ID for cleanup
+    
     setTimerInterval(interval);
-    console.log("New timer interval set:", interval);
   };
+  
   
   // Handle time up
   const handleTimeUp = async () => {
     console.log("Time up! Current grid state:", gridRef.current);
     console.log("Current words to validate:", currentLevelWordsRef.current);
     console.log("level:",level)
-    // Immediately stop the timer
-    if (timerInterval) {
-        clearInterval(timerInterval);
-        setTimerInterval(null);
-    }
+    // IMPORTANT: Immediately stop the timer and ensure it's null
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    setTimerInterval(null);
+  }
   
+  // Explicitly set timer to 0 to avoid any display issues
+  setTimer(0);
     setValidatingWords(true);
   
     const currentGrid = [...gridRef.current];
@@ -891,7 +1022,7 @@ const newTotalPoints = TotalPoints.toFixed(2);
   
     setValidatingWords(false);
   
-    if (correct === totalWords && completedWords === totalWords) {
+    if (correct === totalWords && completedWords === totalWords ) {
       // All words correct - complete level!
       setToastType("success");
       setToastMessage(`Perfect! Level ${levelRef.current} complete!`);
@@ -899,7 +1030,7 @@ const newTotalPoints = TotalPoints.toFixed(2);
      
   } else {
         setToastType("gameOver");
-        setToastMessage(`Time's up! You got ${correct}/3 completed words correct`);
+        setToastMessage(`Time's up! You got ${correct}/${totalWords} completed words correct`);
         setToastMessage2(`+${earnedPoints} TMS points (${newTotalPoints} total)`);
     }
   
@@ -1125,6 +1256,7 @@ const newTotalPoints = TotalPoints.toFixed(2);
   
   // Flag to determine if we should proceed to next level
   const allWordsCorrect = correct === totalWords && completedWords === totalWords;
+
   
   // Show appropriate toast based on performance
   if (completedWords === 0) {
@@ -1132,12 +1264,7 @@ const newTotalPoints = TotalPoints.toFixed(2);
       setToastType("gameOver");
       setToastMessage("No words were completed!");
       setToastMessage2("Try to complete at least one word");
-  } else if (correct === 0) {
-      // Completed words but none correct
-      setToastType("gameOver");
-      setToastMessage("No valid words found");
-      setToastMessage2(`Completed: ${completedWords}/${totalWords} words`);
-  } else if (allWordsCorrect) {
+  }  else if (allWordsCorrect) {
       
         // All words completed and correct - perfect score!
         setToastType("success");
@@ -1179,7 +1306,7 @@ const newTotalPoints = TotalPoints.toFixed(2);
       // If last_hint is set and 24 hours have passed, reset the counter
       if (
         lastHintTime &&
-        now - new Date(lastHintTime).getTime() > 0.1 * 60 * 1000 // 24 hours
+        now - new Date(lastHintTime).getTime() > 24 * 60 * 60 * 1000 // 24 hours
       ) {
         // Reset hint count to 0 in both state and DB
         await updateUser(user?.telegram_id, { hint_count: 0 })
@@ -1192,7 +1319,7 @@ const newTotalPoints = TotalPoints.toFixed(2);
         // User has used all free hints and has no purchased hints
         setToastType("buyHint")
         setToastMessage("All free hints used")
-        setToastMessage2("Buy a hint for 5 gems? Free hints reset in 3 secs.")
+        setToastMessage2(`Buy a hint for 5 gems? Free hints reset in ${hintCountdown}`)
         setToastVisible(true)
         return
       }
@@ -1292,7 +1419,7 @@ const newTotalPoints = TotalPoints.toFixed(2);
     const now = new Date().getTime()
     if (shufflesUsed >= 3) {
       // If last_shuffle is set and 24 hours have passed, reset the counter
-      if (lastShuffleTime && now - new Date(lastShuffleTime).getTime() > 0.1 * 60 * 1000) {
+      if (lastShuffleTime && now - new Date(lastShuffleTime).getTime() > 24 * 60 * 60 * 1000) {
         // Reset shuffle count to 0 in both state and DB
         await updateUser(user?.telegram_id, { shuffle_count: 0 })
         setShufflesUsed(0)
@@ -1303,7 +1430,7 @@ const newTotalPoints = TotalPoints.toFixed(2);
       if (shufflesUsed >= 3 && purchasedShuffles <= 0) {
         setToastType("buyShuffle")
         setToastMessage("All free shuffles used")
-        setToastMessage2("Buy a shuffle for 3 gems? Free shuffles reset in 3 secs.")
+        setToastMessage2(`Buy a shuffle for 3 gems? Free shuffles reset in ${shuffleCountdown}`)
         setToastVisible(true)
         return
       }
@@ -1409,10 +1536,16 @@ const newTotalPoints = TotalPoints.toFixed(2);
   
   // Handle restart game after game over
   // Handle restart game after game over
-  const restartGame = () => {
+ const restartGame = async () => {
   console.log("Restarting game - resetting all state");
   
-  // Clear any lingering game data
+  // Try to use a trial
+  const success = await useOneTrial();
+  if (!success) {
+    return; // Don't restart game if no trials available
+  }
+  
+  // Reset game state
   levelRef.current = 1;
   setLevel(1);
   setToastVisible(false);
@@ -1420,15 +1553,15 @@ const newTotalPoints = TotalPoints.toFixed(2);
   // Reset to default grid size
   const defaultLayout = [4, 4, 3];
   const defaultTotalCells = defaultLayout.reduce((sum, size) => sum + size, 0);
-    
+  
   setGridSizes(defaultLayout);
   setTotalCells(defaultTotalCells);
   
-  // Important: Clear the grid and letters completely
+  // Clear the grid and letters completely
   setGrid(Array(defaultTotalCells).fill(""));
   setLetters([]);
   
-  // Reset the words list - this is critical
+  // Reset the words list
   setCurrentLevelWords([]);
   
   // Reset selection states
@@ -1438,7 +1571,7 @@ const newTotalPoints = TotalPoints.toFixed(2);
   // Clear validation state
   setValidatingWords(false);
   
-  // Make sure to clear any existing timer interval
+  // Clear any existing timer interval
   if (timerInterval) {
     clearInterval(timerInterval);
     setTimerInterval(null);
@@ -1447,7 +1580,7 @@ const newTotalPoints = TotalPoints.toFixed(2);
   // Reset the timer value
   setTimer(0);
   
-  // Reset isSubmitting flag to ensure timer can run
+  // Reset isSubmitting flag
   setIsSubmitting(false);
   
   // Force a complete reset by temporarily setting gameStarted to false
@@ -1455,17 +1588,163 @@ const newTotalPoints = TotalPoints.toFixed(2);
   
   // Use setTimeout to ensure state updates have propagated
   setTimeout(() => {
-    // Then restart the game with clean state
     setGameStarted(true);
-    // Force a fresh load of words
     loadWords();
-    
-    // The key fix: make sure we're properly initializing game state
-    // by calling initializeGame instead of just loadWords
-    // initializeGame();
   }, 200);
-  };
+};
+
+
+
+
+// Use a trial when starting a game
+const useOneTrial = async () => {
+  console.log(availableTrials);
+  if (availableTrials <= 0) {
+    // Show purchase prompt
+    setToastType("buyTrial");
+    setToastMessage("No trials remaining");
+    setToastMessage2(`Purchase a trial for 10 gems?${trialCountdown ? ` Free trials reset in ${trialCountdown}` : ''}`);
+    setToastVisible(true);
+    return false; // Return false to indicate failure
+  }
   
+  // First use purchased trials, then free trials
+  if (purchasedTrials > 0) {
+    const newPurchasedTrials = purchasedTrials - 1;
+    setPurchasedTrials(newPurchasedTrials);
+    setAvailableTrials(newPurchasedTrials + freeTrials);
+    
+    // Update both fields in the database
+    await updateUser(user?.telegram_id, { 
+      purchased_trials: newPurchasedTrials,
+      free_trials: freeTrials
+    });
+  } else {
+    // Use a free trial
+    const newFreeTrials = freeTrials - 1;
+    
+    setFreeTrials(newFreeTrials);
+    setAvailableTrials(newFreeTrials + purchasedTrials);
+    console.log(newFreeTrials, purchasedTrials, availableTrials);
+    
+    // If this was the last free trial, set the timer
+    if (newFreeTrials === 0) {
+      // Store timestamp in milliseconds format consistent with FarmPage
+      const currentTime = Date.now();
+      setLastTrialTime(currentTime);
+      
+      await updateUser(user?.telegram_id, { 
+        free_trials: newFreeTrials,
+        purchased_trials: purchasedTrials,
+        last_jumbo: currentTime
+      });
+    } else {
+      await updateUser(user?.telegram_id, { 
+        free_trials: newFreeTrials,
+        purchased_trials: purchasedTrials
+      });
+    }
+  }
+  
+  return true; // Return true to indicate success
+};
+
+
+const purchaseTrial = async () => {
+  if (!user) return;
+  
+  if (user.gems < 10) {
+    // Instead of just showing toast, offer to watch an ad
+    watchAdForGems();
+    return;
+  }
+  
+  // Deduct gems
+  const newGems = user.gems - 10;
+  
+  
+  // Add to purchased trials, not free trials
+  const newPurchasedTrials = purchasedTrials + 1;
+  setPurchasedTrials(newPurchasedTrials);
+  setAvailableTrials(freeTrials + newPurchasedTrials);
+  
+  // Update in database
+  await updateUser(user.telegram_id, { 
+    gems: newGems,
+    purchased_trials: newPurchasedTrials,
+    free_trials: freeTrials 
+  });
+};
+
+const purchaseTrialViaModal = async () => {
+  // Reset everything to initial state
+  levelRef.current = 1;
+  setLevel(1);
+  
+  // Reset to default grid size
+  const defaultLayout = [4, 4, 3];
+  const defaultTotalCells = defaultLayout.reduce((sum, size) => sum + size, 0);
+  
+  setGridSizes(defaultLayout);
+  setTotalCells(defaultTotalCells);
+  
+  // Clear the grid and letters completely
+  setGrid(Array(defaultTotalCells).fill(""));
+  setLetters([]);
+  
+  // Reset the words list
+  setCurrentLevelWords([]);
+  
+  // Reset selection states
+  setSelectedLetterIndex(null);
+  setSelectedGridIndex(null);
+  
+  // Clear validation state
+  setValidatingWords(false);
+  
+  // Clear any existing timer interval
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    setTimerInterval(null);
+  }
+  
+  // Reset the timer value
+  setTimer(0);
+  
+  // Reset isSubmitting flag
+  setIsSubmitting(false);
+  
+  // Set game as not started
+  setGameStarted(false);
+
+  if (gems < 10) {
+    setToastType("noGems");
+    setToastMessage("Not enough gems!");
+    setToastMessage2("Watch an ad to earn more gems");
+    setToastVisible(true);
+    return;
+  }
+
+  // Deduct gems
+  const newGems = user.gems - 10;
+ 
+  
+  // Add to purchased trials, not free trials
+  const newPurchasedTrials = purchasedTrials + 1;
+  setPurchasedTrials(newPurchasedTrials);
+  setAvailableTrials(freeTrials + newPurchasedTrials);
+  
+  // Update in database
+  await updateUser(user.telegram_id, { 
+    gems: newGems,
+    purchased_trials: newPurchasedTrials,
+    free_trials: freeTrials 
+  });
+  
+  // Close the toast
+  setToastVisible(false);
+};
+
   // Handle time extension (watch ad)
   const extendTime = () => {
     // Simulate ad watching
@@ -1559,7 +1838,49 @@ const closeToast = () => {
   } else if (toastType === "gameOver" || toastType === "timeUp") {
       // User clicked X on "Play Again" toast - restart the game
       restartGame();
-  } else {
+  }  else if (toastType === "buyTrial") {
+    setToastVisible(false);
+    
+    // Reset everything to initial state
+    levelRef.current = 1;
+    setLevel(1);
+    
+    // Reset to default grid size
+    const defaultLayout = [4, 4, 3];
+    const defaultTotalCells = defaultLayout.reduce((sum, size) => sum + size, 0);
+    
+    setGridSizes(defaultLayout);
+    setTotalCells(defaultTotalCells);
+    
+    // Clear the grid and letters completely
+    setGrid(Array(defaultTotalCells).fill(""));
+    setLetters([]);
+    
+    // Reset the words list
+    setCurrentLevelWords([]);
+    
+    // Reset selection states
+    setSelectedLetterIndex(null);
+    setSelectedGridIndex(null);
+    
+    // Clear validation state
+    setValidatingWords(false);
+    
+    // Clear any existing timer interval
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      setTimerInterval(null);
+    }
+    
+    // Reset the timer value
+    setTimer(0);
+    
+    // Reset isSubmitting flag
+    setIsSubmitting(false);
+    
+    // Set game as not started
+    setGameStarted(false);
+  }else {
       // For other toast types, just close the toast
       setToastVisible(false);
 
@@ -1572,6 +1893,9 @@ const closeToast = () => {
 
 
   
+
+
+
   // Modified nextLevel function to ensure clean state transitions
   
   const debugGameState = () => {
@@ -1591,6 +1915,29 @@ const closeToast = () => {
   const formatTime = (seconds) => {
     return `${seconds < 10 ? "0" : ""}${seconds}`
   }
+
+
+  const renderMainGameButton = () => {
+    // Determine the correct button text and action
+    let buttonText = "START GAME";
+    let buttonAction = initializeGame;
+    let isDisabled = isLoading;
+    
+    if (isLoading) {
+      buttonText = "LOADING...";
+      isDisabled = true;
+    } else if (validatingWords) {
+      buttonText = "VALIDATING...";
+      isDisabled = true;
+    } else if (gameStarted) {
+      buttonText = "SUBMIT WORDS";
+      buttonAction = checkAnswers;
+    } else if (availableTrials <= 0) {
+      buttonText = "NO TRIALS LEFT";
+      isDisabled = true; // Disabled when no trials are available
+    }
+  }
+  
   return (
     <ResponsivePadding>
       <div className="flex justify-center items-start overflow-auto py-4 px-4 pb-16">
@@ -1604,31 +1951,54 @@ const closeToast = () => {
         <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden font-['Poppins',sans-serif] mb-16">
           {/* Game Header */}
           <div className="relative bg-[#18325B] p-3 rounded-t-xl shadow-md">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center space-x-2">
-                <div className="bg-white p-1 h-10 w-10 rounded-full flex items-center justify-center shadow-md">
-                 
-                  <img src='/assets/wordfind.svg' className=""/>
-                </div>
-              </div>
-              <div className="flex items-center gap-x-4">
-                {" "}
-                {/* Ensures spacing between elements */}
-                <div className="bg-white p-1 rounded-lg shadow-md flex items-center">
-                  <span className="font-bold text-gray-800 text-sm">{tmsPoints}</span>
-                  <span className="text-blue-500 text-sm ml-1">TMS</span> {/* Added ml-1 for spacing */}
-                </div>
-                <div className="bg-white p-1 rounded-lg shadow-md flex items-center">
-                  <span className="text-purple-500 text-sm">💎</span>
-                  <span className="font-bold text-gray-800 text-sm ml-1">{gems}</span> {/* Added ml-1 for spacing */}
-                </div>
-                <div className="bg-white p-1 rounded-lg shadow-md flex items-center">
-                  <span className="text-yellow-500 text-sm">🏆</span>
-                  <span className="font-bold text-gray-800 text-sm ml-1">{levelRef.current}</span> {/* Added ml-1 for spacing */}
-                </div>
-              </div>
-            </div>
-          </div>
+  <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
+    {/* Game Logo */}
+    <div className="flex items-center space-x-2">
+      <div className="bg-white p-1 h-12 w-12 rounded-full flex items-center justify-center shadow-md">
+        <img src='/assets/wordfind.svg' className=" h-9 w-9"/>
+      </div>
+    </div>
+    
+    {/* Game Stats - Responsive Grid */}
+   {/* Game Stats - Responsive Grid */}
+   <div className="grid grid-cols-2 sm:flex gap-2 sm:gap-x-2 w-full sm:w-auto">
+      {/* Trials - With line break and centered text */}
+      <div className="bg-white p-1 px-2 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
+  <span className="font-bold text-gray-800 text-xs sm:text-sm">
+    {freeTrials === null || purchasedTrials === null
+      ? "Loading..." 
+      : availableTrials > 0 
+        ? `Trials: ${availableTrials}` 
+        : trialCountdown 
+          ? `Free Trials in:` 
+          : "No trials"}
+  </span>
+  { trialCountdown && (
+  <span className="font-bold text-red-500 text-xs sm:text-sm">{trialCountdown}</span>
+)}
+</div>
+      
+      {/* TMS Points */}
+      <div className="bg-white p-1 px-2 rounded-lg shadow-md flex items-center justify-center">
+        <span className="font-bold text-gray-800 text-xs sm:text-sm">{tmsPoints}</span>
+        <span className="text-blue-500 text-xs sm:text-sm ml-1">TMS</span>
+      </div>
+      
+      {/* Gems */}
+      <div className="bg-white p-1 px-2 rounded-lg shadow-md flex items-center justify-center">
+        <span className="text-purple-500 text-xs sm:text-sm">💎</span>
+        <span className="font-bold text-gray-800 text-xs sm:text-sm ml-1">{gems}</span>
+      </div>
+      
+      {/* Level/Trophy */}
+      <div className="bg-white p-1 px-2 rounded-lg shadow-md flex items-center justify-center">
+        <span className="text-yellow-500 text-xs sm:text-sm">🏆</span>
+        <span className="font-bold text-gray-800 text-xs sm:text-sm ml-1">{levelRef.current}</span>
+      </div>
+    </div>
+  </div>
+  
+</div>
 
           {/* Game Status Bar */}
           <div className="p-2 bg-[#FAA31E] shadow-lg">
@@ -1725,84 +2095,100 @@ const closeToast = () => {
 
           {/* Game Controls */}
           <div className="p-3 bg-white border-t border-gray-200">
-          <div className="flex justify-between mb-3">
-  {/* Hint Button */}
-  <div className="flex flex-col items-center">
-    <button
-      onClick={useHint}
-      disabled={!gameStarted || isLoading || validatingWords}
-      className={`flex items-center justify-center w-24 h-10 rounded-lg text-sm ${
-        gameStarted && !isLoading && !validatingWords
-          ? "bg-[#FAA31E] shadow-lg text-white hover:from-green-500 hover:to-green-600 shadow-md"
-          : "bg-[#FAA31E] shadow-lg text-white-400 cursor-not-allowed"
-      }`}
-    >
-      <span className="mr-1">💡</span>
-      <span className="font-bold">Hint</span>
-    </button>
-    <div className="text-xs mt-1 font-semibold text-blue-600">{getHintDescription()}</div>
-    {hintCountdown && (
-      <div className="text-xs mt-1 font-semibold text-red-500">Resets in: {hintCountdown}</div>
-    )}
+  {/* Button Row with responsive grid layout */}
+  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+    {/* Hint Button */}
+    <div className="flex flex-col items-center">
+      <button
+        onClick={useHint}
+        disabled={!gameStarted || isLoading || validatingWords}
+        className={`flex items-center justify-center w-full h-10 rounded-lg text-sm ${
+          gameStarted && !isLoading && !validatingWords
+            ? "bg-[#FAA31E] shadow-lg text-white hover:from-green-500 hover:to-green-600 shadow-md"
+            : "bg-[#FAA31E] shadow-lg text-white-400 cursor-not-allowed"
+        }`}
+      >
+        <span className="mr-1">💡</span>
+        <span className="font-bold">Hint</span>
+      </button>
+      <div className="text-xs mt-1 font-semibold text-blue-600">{getHintDescription()}</div>
+      {hintCountdown && (
+        <div className="text-xs mt-1 font-semibold text-red-500">Resets in: {hintCountdown}</div>
+      )}
+    </div>
+
+    {/* Shuffle Button */}
+    <div className="flex flex-col items-center">
+      <button
+        onClick={shuffleGrid}
+        disabled={!gameStarted || isLoading || validatingWords}
+        className={`flex items-center justify-center w-full h-10 rounded-lg text-sm ${
+          gameStarted && !isLoading && !validatingWords
+            ? "bg-[#FAA31E] shadow-lg text-white hover:from-blue-500 hover:to-blue-600 shadow-md"
+            : "bg-[#FAA31E] shadow-lg text-white-400 cursor-not-allowed"
+        }`}
+      >
+        <span className="mr-1">🔄</span>
+        <span className="font-bold">Shuffle</span>
+      </button>
+      <div className="text-xs mt-1 font-semibold text-blue-600">{getShuffleDescription()}</div>
+      {shuffleCountdown && (
+        <div className="text-xs mt-1 font-semibold text-red-500">Resets in: {shuffleCountdown}</div>
+      )}
+    </div>
+
+    {/* Buy Trial Button */}
+    <div className="flex flex-col items-center">
+      <button
+        onClick={purchaseTrial}
+        className={`flex items-center justify-center w-full h-10 rounded-lg text-sm
+          bg-[#FAA31E] shadow-lg ${gameStarted ? "text-white" : "text-white-400"} font-bold`}
+      >
+        {user?.gems < 10 ? "WATCH AD" : "BUY TRIAL"}
+      </button>
+      <div className="text-xs mt-1 font-semibold text-blue-600">10 💎</div>
+    </div>
+
+    {/* Quit Button */}
+    <div className="flex flex-col items-center">
+      <button
+        onClick={() => {
+          setToastType("quitConfirm")
+          setToastMessage("Do you want to quit the game?")
+          setToastMessage2("Your progress will be lost")
+          setToastVisible(true)
+        }}
+        className={`flex items-center justify-center w-full h-10 rounded-lg text-sm bg-[#FAA31E] shadow-lg hover:from-red-500 hover:to-red-600 shadow-md ${gameStarted ? "text-white" : "text-white-400"}`}
+      >
+        <div className="flex items-center gap-x-1">
+          <XCircle className="w-4 h-4" />
+          <span className="font-bold">Quit</span>
+        </div>
+      </button>
+    </div>
   </div>
 
-  {/* Shuffle Button */}
-  <div className="flex flex-col items-center">
-    <button
-      onClick={shuffleGrid}
-      disabled={!gameStarted || isLoading || validatingWords}
-      className={`flex items-center justify-center w-24 h-10 rounded-lg text-sm ${
-        gameStarted && !isLoading && !validatingWords
-          ? "bg-[#FAA31E] shadow-lg text-white hover:from-blue-500 hover:to-blue-600 shadow-md"
-          : "bg-[#FAA31E] shadow-lg text-white-400 cursor-not-allowed"
-      }`}
-    >
-      <span className="mr-1">🔄</span>
-      <span className="font-bold">Shuffle</span>
-    </button>
-    <div className="text-xs mt-1 font-semibold text-blue-600">{getShuffleDescription()}</div>
-    {shuffleCountdown && (
-      <div className="text-xs mt-1 font-semibold text-red-500">Resets in: {shuffleCountdown}</div>
-    )}
-  </div>
-
-  {/* Quit Button */}
-  <div className="flex flex-col items-center">
-    <button
-      onClick={() => {
-        setToastType("quitConfirm")
-        setToastMessage("Do you want to quit the game?")
-        setToastMessage2("Your progress will be lost")
-        setToastVisible(true)
-      }}
-      className="flex items-center justify-center w-24 h-10 rounded-lg text-sm bg-[#FAA31E] shadow-lg text-white hover:from-red-500 hover:to-red-600 shadow-md"
-    >
-      <div className="flex items-center gap-x-1">
-        <XCircle className="w-4 h-4" />
-        <span className="font-bold">Quit</span>
-      </div>
-    </button>
-  </div>
+  {/* Play/Submit Button */}
+  <button
+    onClick={gameStarted ? checkAnswers : initializeGame}
+    disabled={isLoading || validatingWords || (availableTrials <= 0 && !gameStarted)}
+    className={`w-full py-3 rounded-xl font-bold text-lg shadow-lg transition-all duration-300 transform hover:scale-105 ${
+      isLoading || validatingWords || (availableTrials <= 0 && !gameStarted)
+        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+        : "bg-[#18325B] text-white hover:from-pink-600 hover:via-purple-600 hover:to-indigo-600"
+    }`}
+  >
+    {isLoading
+      ? "LOADING..."
+      : validatingWords
+        ? "VALIDATING..."
+        : gameStarted
+          ? "SUBMIT WORDS"
+          : availableTrials <= 0
+            ? "NO TRIALS LEFT"
+            : "START GAME"}
+  </button>
 </div>
-            {/* Play/Submit Button */}
-            <button
-              onClick={gameStarted ? checkAnswers : initializeGame}
-              disabled={isLoading || validatingWords}
-              className={`w-full py-3 rounded-xl font-bold text-lg shadow-lg transition-all duration-300 transform hover:scale-105 ${
-                isLoading || validatingWords
-                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  : "bg-[#18325B] text-white hover:from-pink-600 hover:via-purple-600 hover:to-indigo-600"
-              }`}
-            >
-              {isLoading
-                ? "LOADING..."
-                : validatingWords
-                  ? "VALIDATING..."
-                  : gameStarted
-                    ? "SUBMIT WORDS"
-                    : "START GAME"}
-            </button>
-          </div>
 
           {/* Toast Modal */}
           {toastVisible && (
@@ -1918,6 +2304,23 @@ const closeToast = () => {
                   {(toastType === "adLoading" || toastType === "gemsEarned") && (
                     <div className="h-10"></div> // Spacer for ad loading state
                   )}
+
+{toastType === "buyTrial" && (
+  <div className="flex justify-center space-x-3">
+    <button
+     onClick={purchaseTrialViaModal}
+      className="py-2 px-4 bg-gradient-to-r from-green-500 to-green-600 rounded-lg text-white font-bold shadow-lg hover:from-green-600 hover:to-green-700 transition-all text-sm"
+    >
+      Purchase (10💎)
+    </button>
+    <button
+      onClick={closeToast}
+      className="py-2 px-4 bg-gradient-to-r from-red-500 to-red-600 rounded-lg text-white font-bold shadow-lg hover:from-red-600 hover:to-red-700 transition-all text-sm"
+    >
+      Cancel
+    </button>
+  </div>
+)}
                 </div>
               </div>
             </div>

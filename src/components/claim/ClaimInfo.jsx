@@ -1,23 +1,23 @@
 // ClaimInfo.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
-
+import { useUser } from "../../hooks/UserProvider";
 const ClaimInfo = () => {
-  const [progress, setProgress] = useState(25);
+
   const navigate = useNavigate();
+  const { workWithFriendsTour,
+    setFriendsFirstTime } = useUser();
 
-  const handleNext = () => {
-    // Increment progress if less than 100
-    if (progress < 100) {
-      setProgress(prev => prev + 25);
-    }
-    
-  };
 
-  const handleSkip = () => {
-    // Placeholder for skipping
-    console.log('Skipped');
-  };
+
+const handleNext = () => {
+workWithFriendsTour();
+};
+
+const handleSkip = () => {
+setFriendsFirstTime(true);
+};
+
 
   return (
     <div className="fixed inset-0 flex flex-col items-center justify-start bg-black/50 pt-60">
