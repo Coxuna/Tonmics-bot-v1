@@ -469,12 +469,11 @@ const FarmPage = () => {
 
   // Handle button click
   const handleButtonClick = () => {
+      if (!user) return;
     actionInProgressRef.current = true;
     switch (farmStatus.stage) {
       case 'initial':
         // Start farming
-        if (!user) return;
-  
         // Immediately update database to farming state
         const startTime = Date.now();
         console.log("Starting new farming session at:", new Date(startTime).toISOString());
@@ -498,7 +497,7 @@ const FarmPage = () => {
         
       case 'farmed':
         // Claim the amount
-        if (!user) return;
+        
         
         console.log("Claiming amount:", amountToClaim);
         const roundedAmountToClaim = parseFloat(amountToClaim.toFixed(2));
@@ -530,6 +529,17 @@ const FarmPage = () => {
       timeRemaining: 0
     });
     setAmountToClaim(0);
+
+    if (intervalRef.current) {
+      if (Array.isArray(intervalRef.current)) {
+        intervalRef.current.forEach(interval => {
+          if (interval) clearInterval(interval);
+        });
+      } else {
+        clearInterval(intervalRef.current);
+      }
+      intervalRef.current = null;
+    }
     
         break;
     }
