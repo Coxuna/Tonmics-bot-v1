@@ -1,12 +1,15 @@
 export const getAvailableSpinCounts = (value) => {
-  const spinMapping = {
-    0: 3,
-    1: 2,
-    2: 1,
-    3: 0,
-  };
+  const maxSpin = 15;
+  
+  // Ensure the value doesn't exceed the maximum spin count
+  if (value < 0 || value > maxSpin) {
+    return 0; // Return 0 if the value is out of range
+  }
 
-  return spinMapping[value] ?? 0; // Default to 0 if value is not in the mapping
+  // Calculate the available spin counts dynamically based on the value
+  const spinMapping = Math.max(0, maxSpin - value);
+
+  return spinMapping;
 }
 
 

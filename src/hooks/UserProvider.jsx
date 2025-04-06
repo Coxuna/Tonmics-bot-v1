@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useCallback, useState } from "react";
 
 // Create User Context
 const UserContext = createContext(null);
@@ -12,6 +12,8 @@ export const UserProvider = ({ children }) => {
     const [loading, setLoading] = useState(false);
 
     // Function to Fetch User Data
+    
+
     const fetchUser = async (user_name, telegram_id) => {
         try {
             setLoading(true);

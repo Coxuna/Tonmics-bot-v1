@@ -1,8 +1,9 @@
-import React from "react";
+import React,{useEffect} from "react";
 import { TonConnectButton } from "@tonconnect/ui-react";
 import { useUser } from "../../hooks/UserProvider";
 const InfoComponent = () => {
-  const {user} =useUser()
+  const { user } = useUser();
+  
   return (
     <>
       <div className="flex flex-row justify-between w-full  p-2">

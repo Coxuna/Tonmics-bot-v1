@@ -35,7 +35,7 @@ const SpinTheWheel = () => {
   const [spinButtonClicked, setSpinButtonClicked] = useState(false);
 
   // Enhanced spin tracking states
-  const [spinsLeft, setSpinsLeft] = useState(3);
+  const [spinsLeft, setSpinsLeft] = useState(15);
   const [lastSpinTime, setLastSpinTime] = useState(null);
   const [spinCountdown, setSpinCountdown] = useState("");
   const [showToast, setShowToast] = useState(false);
@@ -100,14 +100,14 @@ const SpinTheWheel = () => {
         
         if (timeRemaining <= 0) {
           // Reset spins to 3
-          setSpinsLeft(3);
+          setSpinsLeft(15);
           setLastSpinTime(null);
           setSpinCountdown("");
           setShowOutOfSpins(false);
           
           // Update database
           updateUser(user?.telegram_id, { 
-            spin_count: 3,
+            spin_count: 15,
             last_spin: null
           });
         } else {

@@ -2,26 +2,21 @@ import React, { useState, useEffect } from 'react';
 import ResponsivePadding from '../../components/shared/ResponsivePadding';
 import { useNavigate } from 'react-router';
 import { useUser } from '../../hooks/UserProvider';
-
+import TaskRewardToast from '../../components/Task/TaskRewardToast';
 // TaskItem Component
-const TaskItem = ({ task, onStartTask, onClaimReward, onCompleteAndClaimTask }) => {
+const TaskItem = ({ task, onStartTask, onClaimReward, onCompleteAndClaimTask, completeTask }) => {
   const handleAction = () => {
     if (task.status === 'completed') {
-      onClaimReward(task.id);
+      onClaimReward(task.id || task.user_task_id);
+    } else if (task.status === 'claimed') {
+      // Do nothing for already claimed tasks
     } else if (task.external_url) {
-      // Open external URL in a new tab
       window.open(task.external_url, '_blank');
-      
-      // Instead of just marking as in_progress, let's complete it immediately
-      // First mark it as in progress (to maintain proper status flow)
-      //onStartTask(task.id);
-      
-      onCompleteAndClaimTask(task.id);
+      completeTask(task.id || task.user_task_id);
     } else {
-      onStartTask(task.id);
+      onStartTask(task.id || task.user_task_id);
     }
   };
-
 
   return (
     <div className="bg-white rounded-xl p-4 mb-4 flex justify-between items-center shadow-md">
@@ -44,21 +39,23 @@ const TaskItem = ({ task, onStartTask, onClaimReward, onCompleteAndClaimTask }) 
         </div>
       </div>
       <button 
-        className={`px-5 py-2 rounded-lg font-bold border-none text-white uppercase ${
-          task.status === 'completed' ? 'bg-green-500' : 
-          task.status === 'in_progress' ? 'bg-blue-500' : 'bg-[#132446]'
-        }`}
-        onClick={handleAction}
-      >
-        {task.status === 'completed' ? 'completed' : 
-         task.status === 'in_progress' ? 'Continue' : 'Start'}
-      </button>
+      className={`px-5 py-2 rounded-lg font-bold border-none text-white uppercase ${
+        task.status === 'claimed' ? 'bg-green-500' : 
+        task.status === 'completed' ? 'bg-yellow-500' :
+        task.status === 'in_progress' ? 'bg-blue-500' : 'bg-[#132446]'
+      }`}
+      onClick={handleAction}
+    >
+      {task.status === 'claimed' ? 'Claimed' : 
+       task.status === 'completed' ? 'Claim Reward' : 
+       task.status === 'in_progress' ? 'Continue' : 'Start'}
+    </button>
     </div>
   );
 };
 
 // TasksSection Component
-const TasksSection = ({ title, tasks, onStartTask, onClaimReward , onCompleteAndClaimTask }) => {
+const TasksSection = ({ title, tasks, onStartTask, onClaimReward , onCompleteAndClaimTask, completeTask }) => {
   if (!tasks || tasks.length === 0) {
     return (
       <div className="mb-8">
@@ -80,6 +77,7 @@ const TasksSection = ({ title, tasks, onStartTask, onClaimReward , onCompleteAnd
         onStartTask={onStartTask} 
         onClaimReward={onClaimReward}
         onCompleteAndClaimTask={onCompleteAndClaimTask}
+        completeTask={completeTask}
       />
     ))}
   </div>
@@ -140,8 +138,13 @@ const navigate = useNavigate()
     in_game: 0,
     special: 0
   });
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastData, setToastData] = useState({
+    rewardAmount: 0,
+    rewardType: ''
+  });
 
-  const {user} = useUser()
+  const {user, fetchUser} = useUser()
   const [telegram_id, setTelegramId] = useState(null); // Initialize with mock value
 
   useEffect(() => {
@@ -281,10 +284,17 @@ useEffect(() => {
       
       if (data.success) {
         // Remove the task from the UI
-        removeTask(taskId);
+      //  removeTask(taskId);
+      updateTaskStatus(taskId, 'claimed');
+      setToastData({
+        rewardAmount: data.data.reward.rewardAmount,
+        rewardType: data.data.reward.rewardType
+      });
+      
+      
+      setToastVisible(true);
         
-        // Show success message (could add toast notification here)
-        alert(`Reward claimed: ${data.data.reward.rewardAmount} ${data.data.reward.rewardType}`);
+       
       } else {
         throw new Error(data.message || 'Failed to claim reward');
       }
@@ -305,7 +315,7 @@ useEffect(() => {
         body: JSON.stringify({
           telegram_id,
           task_id: taskId,
-          progress: 100
+          progress: 0
         })
       });
       
@@ -339,10 +349,17 @@ useEffect(() => {
         
         if (claimData.success) {
           // Remove the task from the UI
-          removeTask(taskId);
+          //removeTask(taskId);
+
+         
+          setToastData({
+            rewardAmount: claimData.data.reward.rewardAmount,
+            rewardType:  claimData.data.reward.rewardType
+          });
+          setToastVisible(true);
+       
           
-          // Show success message
-          alert(`Reward claimed: ${claimData.data.reward.rewardAmount} ${claimData.data.reward.rewardType}`);
+         
         } else {
           throw new Error(claimData.message || 'Failed to claim reward');
         }
@@ -399,6 +416,10 @@ useEffect(() => {
   const handleNavigateHome = () => {
   
     navigate('/Home');
+    window.location.reload();
+  };
+  const handleCloseToast = () => {
+    setToastVisible(false);
   };
 
   if (loading) {
@@ -450,6 +471,8 @@ useEffect(() => {
     onStartTask={startTask} 
     onClaimReward={claimReward}
     onCompleteAndClaimTask={completeAndClaimTask} 
+    completeTask={completeTask}
+
   />
 )}
 
@@ -462,6 +485,7 @@ useEffect(() => {
                 onStartTask={startTask} 
                 onClaimReward={claimReward} 
                 onCompleteAndClaimTask={completeAndClaimTask} 
+                completeTask={completeTask}
               />
             )}
             
@@ -472,6 +496,7 @@ useEffect(() => {
                 onStartTask={startTask} 
                 onClaimReward={claimReward} 
                 onCompleteAndClaimTask={completeAndClaimTask} 
+                completeTask={completeTask}
               />
             )}
             
@@ -482,10 +507,21 @@ useEffect(() => {
                 onStartTask={startTask} 
                 onClaimReward={claimReward} 
                 onCompleteAndClaimTask={completeAndClaimTask} 
+                completeTask={completeTask}
               />
             )}
           </div>
         </div>
+     
+        <TaskRewardToast
+          isVisible={toastVisible}
+          rewardAmount={toastData.rewardAmount}
+          rewardType={toastData.rewardType}
+          message="Task Completed!"
+          message2="Keep completing tasks to earn rewards"
+          onClose={handleCloseToast}
+        />
+     
       </div>
     </ResponsivePadding>
   );

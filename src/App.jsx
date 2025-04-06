@@ -31,6 +31,7 @@ function App() {
              <Routes>
              <Route path="/" element={<HomePage />} />
              <Route path="/Admin" element={<Admin/>} />
+             <Route path="/Task" element={<TasksView />} />
              <Route element={<AppLayout />}>
        
             <Route path="/Home" element={<MainPage />} />
@@ -41,7 +42,7 @@ function App() {
               <Route path="/Star" element={<RewardsPanel />} />
               <Route path="/Book" element={<ComicPage />} />
               <Route path="/Friends" element={<Friends />} />
-              <Route path="/Task" element={<TasksView />} />
+             
             </Route>
     </Routes>
   

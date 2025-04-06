@@ -16,7 +16,7 @@ const Admin = () => {
     requirement: "",
     external_url: "",
     is_recurring: false,
-    duration_days: 1
+    duration_days: 0
   });
   
   const [signedIn, setSignedIn] = useState(false);
@@ -26,7 +26,7 @@ const Admin = () => {
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const tasksPerPage = 4;
+  const tasksPerPage = 2;
 
   // Fetch tasks when component mounts and when signed in
   useEffect(() => {
@@ -70,8 +70,8 @@ const Admin = () => {
   };
 
   const submitTaskForm = async () => {
-    if (!task.title || !task.reward_amount || !task.reward_type || !task.task_type) {
-      setError('Title, reward amount, reward type, and task type are required');
+    if (!task.title || !task.reward_amount || !task.reward_type || !task.task_type  || !task.external_url) {
+      setError('Title, reward amount, reward type, task type and external url are required');
       return;
     }
     
@@ -109,7 +109,7 @@ const Admin = () => {
   };
 
   const login = () => {
-    if (loginForm.username === "admin" && loginForm.password === "password") {
+    if (loginForm.username === "tonmicsadmin" && loginForm.password === "admintonmics") {
       setSignedIn(true);
       setError(null);
     } else {
@@ -150,6 +150,26 @@ const Admin = () => {
     } catch (err) {
       setError('Failed to refresh daily tasks');
       console.error('Error refreshing daily tasks:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const ensureAllUsersHaveAllTasks = async () => { 
+    try {
+      setLoading(true);
+      const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/tasks/ensure-all-users-tasks`);
+  
+      if (response.data.success) {
+        setError(null);
+        const { usersAffected, tasksAssigned } = response.data.data;
+        alert(`Successfully ensured all users have tasks.\nUsers affected: ${usersAffected}\nTasks assigned: ${tasksAssigned}`);
+      } else {
+        setError(response.data.message || 'Failed to ensure tasks for all users');
+      }
+    } catch (err) {
+      setError('Failed to ensure tasks for all users');
+      console.error('Error ensuring all users have tasks:', err);
     } finally {
       setLoading(false);
     }
@@ -244,7 +264,7 @@ const Admin = () => {
                       <select
                         value={task.reward_type}
                         onChange={handleTaskChange}
-                        className="w-full p-2 rounded text-white border border-gray-300"
+                        className="w-full p-2 rounded bg-black text-white border border-gray-300"
                         name="reward_type"
                       >
                         <option value="t_keys">T-Keys</option>
@@ -259,7 +279,7 @@ const Admin = () => {
                       <select
                         value={task.task_type}
                         onChange={handleTaskChange}
-                        className="w-full p-2 rounded text-white border border-gray-300"
+                        className="w-full p-2 rounded bg-black text-white border border-gray-300"
                         name="task_type"
                       >
                         <option value="onboarding">Onboarding</option>
@@ -293,7 +313,7 @@ const Admin = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-white mb-1">External URL</label>
+                    <label className="block text-white mb-1">External URL*</label>
                     <input 
                       value={task.external_url} 
                       onChange={handleTaskChange} 
@@ -323,14 +343,18 @@ const Admin = () => {
                   >
                     Add Task
                   </button>
+                      {/*  
                   <button 
-                    onClick={refreshDailyTasks}
+                    onClick={ensureAllUsersHaveAllTasks}
                     className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded transition-colors"
                     disabled={loading}
                   >
-                    Refresh Daily Tasks
+                    Ensure Tasks for All Users
                   </button>
-                </div>
+                */}
+                  </div>
+            
+               
               </>
             ) : (
               <>

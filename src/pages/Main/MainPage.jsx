@@ -75,7 +75,7 @@ const MainPage = () => {
                 </div>
                 <div className="card w-fit flex px-4 mb-2 flex-row items-center bg-blue-600 rounded-md w-7 h-7" style={{marginBottom:'13px'}}>
                   <img className="w-6 h-6 mr-2" src="/assets/zap.png" alt="Keys" />
-                  <span className="text-white flex h-full items-center py-2">{getAvailableSpinCounts(user?.spin_count)}/3</span>
+                  <span className="text-white flex h-full items-center py-2">{getAvailableSpinCounts(user?.spin_count)}/15</span>
                 </div>
               </div>
             </div>
