@@ -24,7 +24,7 @@ const FarmPage = () => {
   const intervalRef = useRef(null);
 
   // Configurable farming settings - 4 hours for farming, 10 minutes for claiming
-  const FARM_INTERVAL = 4 * 60 * 60 * 1000; // 4 hours farming duration
+  const FARM_INTERVAL = 0.1 * 60 * 1000; // 4 hours farming duration
   const CLAIM_DURATION = 15 * 60 * 1000; // 10 minutes claim duration
 
   // Dynamic level calculation function
@@ -468,85 +468,98 @@ const FarmPage = () => {
   };
 
   // Handle button click
-  const handleButtonClick = () => {
-      if (!user) return;
-    actionInProgressRef.current = true;
-    switch (farmStatus.stage) {
-      case 'initial':
-        // Start farming
-        // Immediately update database to farming state
-        const startTime = Date.now();
-        console.log("Starting new farming session at:", new Date(startTime).toISOString());
-        
-        updateUser(user.telegram_id, {
-          farming_stage: 'farming',
-          farming_start_time: startTime,
-          farming_time_remaining: FARM_INTERVAL,
-          accumulated_amount: 0,
-          last_farming_update: startTime
-        });
-  
-        // Start farming countdown
-        startFarmingCountdown(startTime);
-        break;
-        
-      case 'farming':
-        // Cannot interact during farming
-        console.log("Cannot interact during farming");
-        break;
-        
-      case 'farmed':
-        // Claim the amount
-        
-        
-        console.log("Claiming amount:", amountToClaim);
-        const roundedAmountToClaim = parseFloat(amountToClaim.toFixed(2));
-        const updatedPoints = parseFloat(
-          (Number(user.tms_points || 0) + roundedAmountToClaim).toFixed(2)
-        );
-        
-        console.log("Current points:", user.tms_points);
-        console.log("New total points:", updatedPoints);
-        
-        // Prepare update data
-        const updateData = {
-          tms_points: updatedPoints,
-          last_claim: Date.now(),
-          farming_stage: 'initial',
-          farming_start_time: null,
-          farming_time_remaining: 0,
-          accumulated_amount: 0,
-          last_farming_update: Date.now()
-        };
-        
-        updateUser(user.telegram_id, updateData);
-  
-        // Reset local state
-        // Reset local state
-    setFarmStatus({
-      stage: 'initial',
-      startTime: null,
-      timeRemaining: 0
-    });
-    setAmountToClaim(0);
-
-    if (intervalRef.current) {
-      if (Array.isArray(intervalRef.current)) {
-        intervalRef.current.forEach(interval => {
-          if (interval) clearInterval(interval);
-        });
-      } else {
-        clearInterval(intervalRef.current);
-      }
-      intervalRef.current = null;
-    }
+  const handleButtonClick = async () => {
+    if (!user || actionInProgressRef.current) return;
     
-        break;
-    }
-
-    setTimeout(() => {
+    // Set flag to prevent multiple clicks
+    actionInProgressRef.current = true;
+    
+    try {
+      switch (farmStatus.stage) {
+        case 'initial':
+          // Start farming
+          const startTime = Date.now();
+          console.log("Starting new farming session at:", new Date(startTime).toISOString());
+          
+          // First update local state
+          setFarmStatus({
+            stage: 'farming',
+            startTime: startTime,
+            timeRemaining: FARM_INTERVAL
+          });
+          
+          // Then update database (await to ensure it completes)
+          await updateUser(user.telegram_id, {
+            farming_stage: 'farming',
+            farming_start_time: startTime,
+            farming_time_remaining: FARM_INTERVAL,
+            accumulated_amount: 0,
+            last_farming_update: startTime
+          });
+      
+          // Start farming countdown only after database update succeeds
+          startFarmingCountdown(startTime);
+          break;
+            
+        case 'farming':
+          // Cannot interact during farming
+          console.log("Cannot interact during farming");
+          break;
+            
+        case 'farmed':
+          // Claim the amount
+          console.log("Claiming amount:", amountToClaim);
+          const roundedAmountToClaim = parseFloat(amountToClaim.toFixed(2));
+          const updatedPoints = parseFloat(
+            (Number(user.tms_points || 0) + roundedAmountToClaim).toFixed(2)
+          );
+          
+          console.log("Current points:", user.tms_points);
+          console.log("New total points:", updatedPoints);
+          
+          // First update local state
+          setFarmStatus({
+            stage: 'initial',
+            startTime: null,
+            timeRemaining: 0
+          });
+          setAmountToClaim(0);
+          
+          // Clear any running intervals
+          if (intervalRef.current) {
+            if (Array.isArray(intervalRef.current)) {
+              intervalRef.current.forEach(interval => {
+                if (interval) clearInterval(interval);
+              });
+            } else {
+              clearInterval(intervalRef.current);
+            }
+            intervalRef.current = null;
+          }
+          
+          // Prepare update data
+          const updateData = {
+            tms_points: updatedPoints,
+            last_claim: Date.now(),
+            farming_stage: 'initial',
+            farming_start_time: null,
+            farming_time_remaining: 0,
+            accumulated_amount: 0,
+            last_farming_update: Date.now()
+          };
+          
+          // Then update database (await to ensure it completes)
+          await updateUser(user.telegram_id, updateData);
+          break;
+      }
+    } catch (error) {
+      console.error("Error in handleButtonClick:", error);
+      // Handle error - maybe reset to initial state if things fail
+      resetToInitialState();
+    } finally {
+      // Always reset action flag when done
       actionInProgressRef.current = false;
-    }, 100); // Small delay to ensure state updates complete
+    }
   };
 
   // Level and points update
