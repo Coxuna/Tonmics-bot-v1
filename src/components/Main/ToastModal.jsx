@@ -18,15 +18,7 @@ const Toast = ({
 
   const watchAdFunction = () => {
     if (onWatchAd) {
-      window.Adsgram?.init({ blockId: "int-9606" })?.show()
-        .then((result) => {
-          if (result.done) {
-            onWatchAd();
-          }
-        })
-        .catch(() => {
-          alert('Error playing ad');
-        });
+      onWatchAd();
     }
   };
 
