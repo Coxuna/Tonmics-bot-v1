@@ -321,11 +321,11 @@ const SpinTheWheel = () => {
   };
 
   const handleWatchAd = () => {
-    window.Adsgram?.init({ blockId: "int-7955" })?.show()
+    window.Adsgram?.init({ blockId: "int-9606" })?.show()
       .then((result) => {
         if (result.done) {
           // Give one more spin, max 3
-          const newSpinCount = Math.min((spinsLeft || 0) + 1, 3);
+          const newSpinCount = Math.min((spinsLeft || 0) + 1, 15);
           
           // Update user data
           if (user && user.telegram_id) {

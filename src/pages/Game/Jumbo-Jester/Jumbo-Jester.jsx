@@ -1769,7 +1769,7 @@ const purchaseTrialViaModal = async () => {
   }
   
   // Handle watch ad for gems
-  const watchAdForGems = () => {
+  {/*  const watchAdForGems = () => {
     // Simulate ad watching
     setToastVisible(false)
   
@@ -1796,7 +1796,69 @@ const purchaseTrialViaModal = async () => {
         setToastVisible(false)
       }, 1500)
     }, 1500)
+  }*/}
+
+  const watchAdForGems = () => {
+    // Hide any existing toast
+    setToastVisible(false)
+    
+    // Show ad loading message
+    setToastType("adLoading")
+    setToastMessage("Loading advertisement...")
+    setToastMessage2("Please wait")
+    setToastVisible(true)
+    
+    // Initialize and show Adsgram ad
+    window.Adsgram?.init({ blockId: "int-9606" })?.show()
+      .then((result) => {
+        // Hide the loading toast
+        setToastVisible(false)
+        
+        if (result.done) {
+          // Ad was watched successfully
+          // Add gems to user account
+          updateUser(user?.telegram_id, { gems: user?.gems + 15 })
+            .then(() => {
+              // Show success message
+              setToastType("gemsEarned")
+              setToastMessage("You earned 15 gems!")
+              setToastMessage2("")
+              setToastVisible(true)
+              
+              // Auto-close success message
+              setTimeout(() => {
+                setToastVisible(false)
+              }, 1500)
+            })
+            .catch(error => {
+              console.error("Error updating user gems:", error)
+              setToastType("error")
+              setToastMessage("Failed to add gems")
+              setToastMessage2("Please try again")
+              setToastVisible(true)
+            })
+        } else {
+          // Ad wasn't completed
+          setToastType("error")
+          setToastMessage("Ad not completed")
+          setToastMessage2("No gems awarded")
+          setToastVisible(true)
+        }
+      })
+      .catch(() => {
+        setToastVisible(false)
+        setToastType("error")
+        setToastMessage("Error playing ad")
+        setToastMessage2("Please try again later")
+        setToastVisible(true)
+        
+        // Auto-close error message
+        setTimeout(() => {
+          setToastVisible(false)
+        }, 3000)
+      })
   }
+ 
   
   const getHintDescription = () => {
     if (hintsUsed === null) return "Loading..."

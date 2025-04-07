@@ -18,7 +18,7 @@ const Toast = ({
 
   const watchAdFunction = () => {
     if (onWatchAd) {
-      window.Adsgram?.init({ blockId: "int-7955" })?.show()
+      window.Adsgram?.init({ blockId: "int-9606" })?.show()
         .then((result) => {
           if (result.done) {
             onWatchAd();
@@ -71,7 +71,7 @@ const Toast = ({
         <div className="flex justify-center mt-5">
           {watchAds && (
             <button 
-            //  onClick={watchAdFunction}
+             onClick={watchAdFunction}
               className="bg-[#FAA31E] h-10 px-10 text-black font-bold mr-10 shadow-[2px_10px_0px_0px_black]"
             >
               <span>Watch Ads</span>
