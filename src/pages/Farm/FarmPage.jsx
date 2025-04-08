@@ -23,7 +23,7 @@ const FarmPage = () => {
 
   // Configurable farming settings - 4 hours for farming, 10 minutes for claiming
   const FARM_INTERVAL = 4 * 60  * 60 * 1000; // 4 hours farming duration
-  const CLAIM_DURATION = 15 * 60 * 1000; // 10 minutes claim duration
+  const CLAIM_DURATION = 20 * 60 * 1000; // 10 minutes claim duration
 
   // Dynamic level calculation function
   const calculateLevelThreshold = (level) => {
@@ -509,7 +509,7 @@ const FarmPage = () => {
           console.log("Claiming amount:", amountToClaim);
           const roundedAmountToClaim = parseFloat(amountToClaim.toFixed(2));
           const updatedPoints = parseFloat(
-            (Number(user.tms_points || 0) + roundedAmountToClaim).toFixed(2)
+            (Number(user.claim_points || 0) + roundedAmountToClaim).toFixed(2)
           );
           
           console.log("Current points:", user.tms_points);
@@ -537,7 +537,7 @@ const FarmPage = () => {
           
           // Prepare update data
           const updateData = {
-            tms_points: updatedPoints,
+            claim_points: updatedPoints,
             last_claim: Date.now(),
             farming_stage: 'initial',
             farming_start_time: null,
@@ -564,7 +564,7 @@ const FarmPage = () => {
   useEffect(() => {
     if (!user || actionInProgressRef.current) return;
     if (user) {
-      const points = parseFloat(user.tms_points || 0);
+      const points = parseFloat(user.claim_points || 0);
       setUserPoints(points);
 
       const { lowerLevel, upperLevel, progressPercentage } = calculateLevelProgress(points);

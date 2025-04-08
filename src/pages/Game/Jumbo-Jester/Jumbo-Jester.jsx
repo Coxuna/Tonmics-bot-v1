@@ -2001,419 +2001,432 @@ const closeToast = () => {
   }
   
   return (
-    <ResponsivePadding>
-      <div className="flex justify-center items-start overflow-auto py-4 px-4 pb-16">
-        {/* Background image */}
-        <img
-          className="fixed w-full h-full object-cover top-0 left-0 -z-10"
-          src="/assets/secondbackground.webp"
-          alt="Background"
-        />
-
-        <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden font-['Poppins',sans-serif] mb-16">
-          {/* Game Header */}
-          <div className="relative bg-[#18325B] p-3 rounded-t-xl shadow-md">
-  <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-    {/* Game Logo */}
-    <div className="flex items-center space-x-2">
-      <div className="bg-white p-1 h-12 w-12 rounded-full flex items-center justify-center shadow-md">
-        <img src='/assets/wordfind.svg' className=" h-9 w-9"/>
-      </div>
-    </div>
-    
-    {/* Game Stats - Responsive Grid */}
-   {/* Game Stats - Responsive Grid */}
-   <div className="grid grid-cols-2 sm:flex gap-2 sm:gap-x-2 w-full sm:w-auto">
-      {/* Trials - With line break and centered text */}
-      <div className="bg-white p-1 px-2 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
-  <span className="font-bold text-gray-800 text-xs sm:text-sm">
-    {freeTrials === null || purchasedTrials === null
-      ? "Loading..." 
-      : availableTrials > 0 
-        ? `Trials: ${availableTrials}` 
-        : trialCountdown 
-          ? `Free Trials in:` 
-          : "No trials"}
-  </span>
-  { trialCountdown && (
-  <span className="font-bold text-red-500 text-xs sm:text-sm">{trialCountdown}</span>
-)}
-</div>
-      
-      {/* TMS Points */}
-      <div className="bg-white p-1 px-2 rounded-lg shadow-md flex items-center justify-center">
-        <span className="font-bold text-gray-800 text-xs sm:text-sm">{tmsPoints}</span>
-        <span className="text-blue-500 text-xs sm:text-sm ml-1">TMS</span>
-      </div>
-      
-      {/* Gems */}
-      <div className="bg-white p-1 px-2 rounded-lg shadow-md flex items-center justify-center">
-        <span className="text-purple-500 text-xs sm:text-sm">💎</span>
-        <span className="font-bold text-gray-800 text-xs sm:text-sm ml-1">{gems}</span>
-      </div>
-      
-      {/* Level/Trophy */}
-      <div className="bg-white p-1 px-2 rounded-lg shadow-md flex items-center justify-center">
-        <span className="text-yellow-500 text-xs sm:text-sm">🏆</span>
-        <span className="font-bold text-gray-800 text-xs sm:text-sm ml-1">{levelRef.current}</span>
-      </div>
-    </div>
-  </div>
+   
+   <div className="flex justify-center items-start h-screen overflow-hidden py-2">
+      {/* Background image */}
+      <img
+        className="fixed w-full h-full object-cover top-0 left-0 -z-10"
+        src="/assets/secondbackground.webp"
+        alt="Background"
+      />
   
-</div>
-
-          {/* Game Status Bar */}
-          <div className="p-2 bg-[#FAA31E] shadow-lg">
-            <div className="flex justify-center items-center">
-              <div className="flex items-center bg-blue-600 text-white px-3 py-1 rounded-full shadow-md">
-                <span className="mr-1">⏱️</span>
-                <span className="font-bold">{formatTime(timer)}</span>
+      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden font-['Poppins',sans-serif] flex flex-col max-h-[98vh]">
+        {/* Game Header */}
+        <div className="relative bg-[#18325B] p-2 sm:p-3 rounded-t-xl shadow-md shrink-0">
+  <div className="flex flex-col sm:flex-row justify-center items-center gap-2">
+    {/* Game Stats - Responsive Grid */}
+    <div className="grid grid-cols-2 sm:flex gap-2 sm:gap-x-2 w-full sm:w-auto mx-auto">
+              {/* Trials - With line break and centered text */}
+              <div className="bg-white p-1 px-2 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
+                <span className="font-bold text-gray-800 text-xs sm:text-sm">
+                  {freeTrials === null || purchasedTrials === null
+                    ? "Loading..." 
+                    : availableTrials > 0 
+                      ? `Trials: ${availableTrials}` 
+                      : trialCountdown 
+                        ? `Free Trials in:` 
+                        : "No trials"}
+                </span>
+                {trialCountdown && (
+                  <span className="font-bold text-red-500 text-xs sm:text-sm">{trialCountdown}</span>
+                )}
+              </div>
+              
+              {/* TMS Points */}
+              <div className="bg-white p-1 px-2 rounded-lg shadow-md flex items-center justify-center">
+                <span className="font-bold text-gray-800 text-xs sm:text-sm">{tmsPoints}</span>
+                <span className="text-blue-500 text-xs sm:text-sm ml-1">TMS</span>
+              </div>
+              
+              {/* Gems */}
+              <div className="bg-white p-1 px-2 rounded-lg shadow-md flex items-center justify-center">
+                <span className="text-purple-500 text-xs sm:text-sm">💎</span>
+                <span className="font-bold text-gray-800 text-xs sm:text-sm ml-1">{gems}</span>
+              </div>
+              
+              {/* Level/Trophy */}
+              <div className="bg-white p-1 px-2 rounded-lg shadow-md flex items-center justify-center">
+                <span className="text-yellow-500 text-xs sm:text-sm">🏆</span>
+                <span className="font-bold text-gray-800 text-xs sm:text-sm ml-1">{levelRef.current}</span>
               </div>
             </div>
           </div>
-
-    
-
-{/* Game Grid - Show loading state if fetching words */}
-<div className="p-4 bg-white">
-  {isLoading || validatingWords ? (
-    <div className="flex flex-col items-center justify-center h-36">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mb-3"></div>
-      <p className="text-gray-600 text-sm">{validatingWords ? "Validating words..." : "Loading words..."}</p>
-    </div>
-  ) : (
-    <>
-      {/* Dynamic Grid Rendering */}
-      {gridSizes.map((rowSize, rowIndex) => {
-        // Calculate starting index for this row
-        const startIdx = rowIndex === 0 ? 0 : 
-                         gridSizes.slice(0, rowIndex).reduce((sum, size) => sum + size, 0);
-        
-        // Calculate ending index (exclusive)
-        const endIdx = startIdx + rowSize;
-        
-        // Get just the cells for this row
-        const rowCells = grid.slice(startIdx, endIdx);
-        
-        return (
-          <div 
-            key={`row-${rowIndex}`} 
-            className={`grid gap-2 mb-2 mt-${rowIndex > 0 ? 3 : 0}`}
-            style={{
-              gridTemplateColumns: `repeat(${rowSize}, minmax(0, 1fr))`,
-              marginLeft: rowIndex === 2 ? "20px" : "0px", // Shift the third row as in original design
-              marginTop: rowIndex > 0 ? "7px" : "0px"
-            }}
-          >
-            {rowCells.map((letter, cellIndex) => {
-              const gridIndex = startIdx + cellIndex;
-              return (
-                <div
-                  key={gridIndex}
-                  onClick={() => selectGridPosition(gridIndex)}
-                  className={`w-full h-16 flex items-center justify-center rounded-lg text-xl font-bold transition-all duration-300 shadow-md ${
-                    selectedGridIndex === gridIndex
-                      ? "bg-yellow-200 border-2 border-yellow-400 animate-pulse"
-                      : letter
-                        ? "bg-blue-100 text-blue-800 hover:bg-blue-200 cursor-pointer"
-                        : "bg-gray-50 border-2 border-gray-200 hover:bg-gray-100 cursor-pointer"
-                  }`}
-                >
-                  {letter || ""}
-                </div>
-              );
-            })}
-          </div>
-        );
-      })}
-    </>
-  )}
-</div>
-
-          {/* Letter Rack */}
-          {/* Letter Rack */}
-          <div className="p-3 bg-gray-100">
-            <div className="bg-[#18325B] p-3 rounded-xl shadow-inner mx-auto">
-              <div className="flex justify-center flex-wrap gap-2">
-                {letters.map((letter, index) => (
-                  <div
-                    key={index}
-                    onClick={() => letter && selectLetter(index)}
-                    className={`h-12 w-12 rounded-lg flex items-center justify-center text-xl font-bold transition-all duration-200 ${
-                      !letter
-                        ? "hidden"
-                        : // Hide empty slots instead of showing them as transparent
-                          selectedLetterIndex === index
-                          ? "bg-yellow-400 text-gray-900 scale-110 shadow-lg"
-                          : "bg-white text-gray-900 hover:bg-yellow-100 cursor-pointer shadow-md"
-                    }`}
-                  >
-                    {letter}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Game Controls */}
-          <div className="p-3 bg-white border-t border-gray-200">
-  {/* Button Row with responsive grid layout */}
-  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
-    {/* Hint Button */}
-    <div className="flex flex-col items-center">
-      <button
-        onClick={useHint}
-        disabled={!gameStarted || isLoading || validatingWords}
-        className={`flex items-center justify-center w-full h-10 rounded-lg text-sm ${
-          gameStarted && !isLoading && !validatingWords
-            ? "bg-[#FAA31E] shadow-lg text-white hover:from-green-500 hover:to-green-600 shadow-md"
-            : "bg-[#FAA31E] shadow-lg text-white-400 cursor-not-allowed"
-        }`}
-      >
-        <span className="mr-1">💡</span>
-        <span className="font-bold">Hint</span>
-      </button>
-      <div className="text-xs mt-1 font-semibold text-blue-600">{getHintDescription()}</div>
-      {hintCountdown && (
-        <div className="text-xs mt-1 font-semibold text-red-500">Resets in: {hintCountdown}</div>
-      )}
-    </div>
-
-    {/* Shuffle Button */}
-    <div className="flex flex-col items-center">
-      <button
-        onClick={shuffleGrid}
-        disabled={!gameStarted || isLoading || validatingWords}
-        className={`flex items-center justify-center w-full h-10 rounded-lg text-sm ${
-          gameStarted && !isLoading && !validatingWords
-            ? "bg-[#FAA31E] shadow-lg text-white hover:from-blue-500 hover:to-blue-600 shadow-md"
-            : "bg-[#FAA31E] shadow-lg text-white-400 cursor-not-allowed"
-        }`}
-      >
-        <span className="mr-1">🔄</span>
-        <span className="font-bold">Shuffle</span>
-      </button>
-      <div className="text-xs mt-1 font-semibold text-blue-600">{getShuffleDescription()}</div>
-      {shuffleCountdown && (
-        <div className="text-xs mt-1 font-semibold text-red-500">Resets in: {shuffleCountdown}</div>
-      )}
-    </div>
-
-    {/* Buy Trial Button */}
-    <div className="flex flex-col items-center">
-      <button
-        onClick={purchaseTrial}
-        className={`flex items-center justify-center w-full h-10 rounded-lg text-sm
-          bg-[#FAA31E] shadow-lg ${gameStarted ? "text-white" : "text-white-400"} font-bold`}
-      >
-        {user?.gems < 10 ? "WATCH AD" : "BUY TRIAL"}
-      </button>
-      <div className="text-xs mt-1 font-semibold text-blue-600">10 💎</div>
-    </div>
-
-    {/* Quit Button */}
-    <div className="flex flex-col items-center">
-      <button
-        onClick={() => {
-          setToastType("quitConfirm")
-          setToastMessage("Do you want to quit the game?")
-          setToastMessage2("Your progress will be lost")
-          setToastVisible(true)
-        }}
-        className={`flex items-center justify-center w-full h-10 rounded-lg text-sm bg-[#FAA31E] shadow-lg hover:from-red-500 hover:to-red-600 shadow-md ${gameStarted ? "text-white" : "text-white-400"}`}
-      >
-        <div className="flex items-center gap-x-1">
-          <XCircle className="w-4 h-4" />
-          <span className="font-bold">Quit</span>
         </div>
-      </button>
-    </div>
-  </div>
-
-  {/* Play/Submit Button */}
-  <button
-    onClick={gameStarted ? checkAnswers : initializeGame}
-    disabled={isLoading || validatingWords || (availableTrials <= 0 && !gameStarted)}
-    className={`w-full py-3 rounded-xl font-bold text-lg shadow-lg transition-all duration-300 transform hover:scale-105 ${
-      isLoading || validatingWords || (availableTrials <= 0 && !gameStarted)
-        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-        : "bg-[#18325B] text-white hover:from-pink-600 hover:via-purple-600 hover:to-indigo-600"
-    }`}
-  >
-    {isLoading
-      ? "LOADING..."
-      : validatingWords
-        ? "VALIDATING..."
-        : gameStarted
-          ? "SUBMIT WORDS"
-          : availableTrials <= 0
-            ? "NO TRIALS LEFT"
-            : "START GAME"}
-  </button>
-</div>
-
-          {/* Toast Modal */}
-          {toastVisible && (
-            <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 backdrop-blur-sm">
-              <div
-                className="bg-gradient-to-br from-blue-900 to-indigo-900 p-6 rounded-2xl w-11/12 max-w-md shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex justify-end">
-                  <button onClick={closeToast} className="text-white opacity-70 hover:opacity-100 transition-opacity">
-                    <span className="text-2xl">×</span>
-                  </button>
-                </div>
-
-                <div className="flex flex-col items-center justify-center mb-6">
-                  {toastType === "success" && <div className="text-6xl mb-4">🏆</div>}
-                  {toastType === "gameOver" && <div className="text-6xl mb-4"> <img src='/assets/wordfind.svg' className="h-16 w-16"/></div>}
-                  {toastType === "timeUp" && <div className="text-6xl mb-4">⏱️</div>}
-                  {toastType === "noGems" && <div className="text-6xl mb-4">💎</div>}
-                  {toastType === "adLoading" && <div className="text-6xl mb-4 animate-pulse">🎥</div>}
-                  {toastType === "gemsEarned" && <div className="text-6xl mb-4">💎</div>}
-                  {toastType === "buyHint" && <div className="text-6xl mb-4">💡</div>}
-                  {toastType === "buyShuffle" && <div className="text-6xl mb-4">🔄</div>}
-
-                  <h2 className="text-xl font-bold text-white text-center mb-2">{toastMessage}</h2>
-                  <p className="text-blue-200 text-center text-sm">{toastMessage2}</p>
-
-                  {toastType === "quitConfirm" && <div className="text-6xl mb-4"> </div>}
-
-                  {toastType === "quitConfirm" && (
-                    <div className="flex items-center gap-x-4">
-                      {" "}
-                      {/* Flex container with spacing */}
-                      <button
-                        onClick={() => navigate("/Game")}
-                        className="py-2 px-4 bg-gradient-to-r from-red-500 to-red-600 rounded-lg text-white font-bold shadow-lg hover:from-red-600 hover:to-red-700 transition-all text-sm"
-                      >
-                        Yes
-                      </button>
-                      <button
-                        onClick={closeToast}
-                        className="py-2 px-4 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg text-white font-bold shadow-lg hover:from-blue-600 hover:to-blue-700 transition-all text-sm"
-                      >
-                        No
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex justify-center space-x-3">
-                  {toastType === "timeUp" && (
-                    <>
-                      <button
-                        onClick={extendTime}
-                        className="py-2 px-4 bg-gradient-to-r from-green-500 to-green-600 rounded-lg text-white font-bold shadow-lg hover:from-green-600 hover:to-green-700 transition-all text-sm"
-                      >
-                        +10 Sec (🎥)
-                      </button>
-                      <button
-                        onClick={restartGame}
-                        className="py-2 px-4 bg-gradient-to-r from-red-500 to-red-600 rounded-lg text-white font-bold shadow-lg hover:from-red-600 hover:to-red-700 transition-all text-sm"
-                      >
-                        Restart
-                      </button>
-                    </>
-                  )}
-
-                  {toastType === "success" && (
-                    <button
-                      onClick={nextLevel}
-                      className="py-2 px-4 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg text-white font-bold shadow-lg hover:from-blue-600 hover:to-indigo-600 transition-all text-sm"
-                    >
-                      Next Level
-                    </button>
-                  )}
-
-                  {toastType === "gameOver" && (
-                    <button
-                      onClick={restartGame}
-                      className="py-2 px-4 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg text-white font-bold shadow-lg hover:from-orange-600 hover:to-red-600 transition-all text-sm"
-                    >
-                      Play Again
-                    </button>
-                  )}
-
-                  {toastType === "noGems" && (
-                    <button
-                      onClick={watchAdForGems}
-                      className="py-2 px-4 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg text-white font-bold shadow-lg hover:from-purple-600 hover:to-purple-700 transition-all text-sm"
-                    >
-                      Watch Ad for Gems
-                    </button>
-                  )}
-
-                  {toastType === "buyHint" && (
-                    <button
-                      onClick={purchaseHint}
-                      className="py-2 px-4 bg-gradient-to-r from-green-500 to-green-600 rounded-lg text-white font-bold shadow-lg hover:from-green-600 hover:to-green-700 transition-all text-sm"
-                    >
-                      Purchase (5💎)
-                    </button>
-                  )}
-
-                  {toastType === "buyShuffle" && (
-                    <button
-                      onClick={purchaseShuffle}
-                      className="py-2 px-4 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg text-white font-bold shadow-lg hover:from-blue-600 hover:to-blue-700 transition-all text-sm"
-                    >
-                      Purchase (3💎)
-                    </button>
-                  )}
-
-                  {(toastType === "adLoading" || toastType === "gemsEarned") && (
-                    <div className="h-10"></div> // Spacer for ad loading state
-                  )}
-
-{toastType === "buyTrial" && (
-  <div className="flex justify-center space-x-3">
-    <button
-     onClick={purchaseTrialViaModal}
-      className="py-2 px-4 bg-gradient-to-r from-green-500 to-green-600 rounded-lg text-white font-bold shadow-lg hover:from-green-600 hover:to-green-700 transition-all text-sm"
-    >
-      Purchase (10💎)
-    </button>
-    <button
-      onClick={closeToast}
-      className="py-2 px-4 bg-gradient-to-r from-red-500 to-red-600 rounded-lg text-white font-bold shadow-lg hover:from-red-600 hover:to-red-700 transition-all text-sm"
-    >
-      Cancel
-    </button>
-  </div>
-)}
-                </div>
-              </div>
+  
+        {/* Game Status Bar */}
+        <div className="p-1 sm:p-2 bg-[#FAA31E] shadow-lg shrink-0">
+          <div className="flex justify-center items-center">
+            <div className="flex items-center bg-blue-600 text-white px-2 sm:px-3 py-1 rounded-full shadow-md">
+              <span className="mr-1">⏱️</span>
+              <span className="font-bold">{formatTime(timer)}</span>
             </div>
+          </div>
+        </div>
+  
+        {/* Game Grid - Make this section scrollable with flex-grow */}
+        <div className="p-2 sm:p-4 bg-white flex-grow overflow-auto">
+          {isLoading || validatingWords ? (
+            <div className="flex flex-col items-center justify-center h-24 sm:h-36">
+              <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-b-2 border-blue-500 mb-2 sm:mb-3"></div>
+              <p className="text-gray-600 text-xs sm:text-sm">{validatingWords ? "Validating words..." : "Loading words..."}</p>
+            </div>
+          ) : (
+            <>
+              {/* Dynamic Grid Rendering */}
+              {gridSizes.map((rowSize, rowIndex) => {
+                // Calculate starting index for this row
+                const startIdx = rowIndex === 0 ? 0 : 
+                              gridSizes.slice(0, rowIndex).reduce((sum, size) => sum + size, 0);
+                
+                // Calculate ending index (exclusive)
+                const endIdx = startIdx + rowSize;
+                
+                // Get just the cells for this row
+                const rowCells = grid.slice(startIdx, endIdx);
+                
+                return (
+                  <div 
+                    key={`row-${rowIndex}`} 
+                    className="grid gap-1 sm:gap-2 mb-1 sm:mb-2"
+                    style={{
+                      gridTemplateColumns: `repeat(${rowSize}, minmax(0, 1fr))`,
+                      marginLeft: rowIndex === 2 ? "10px" : "0px", // Smaller margin on small screens
+                      marginTop: rowIndex > 0 ? "4px" : "0px"
+                    }}
+                  >
+                    {rowCells.map((letter, cellIndex) => {
+                      const gridIndex = startIdx + cellIndex;
+                      return (
+                        <div
+                          key={gridIndex}
+                          onClick={() => selectGridPosition(gridIndex)}
+                          className={`w-full h-10 sm:h-14 md:h-16 flex items-center justify-center rounded-lg text-base sm:text-lg md:text-xl font-bold transition-all duration-300 shadow-md ${
+                            selectedGridIndex === gridIndex
+                              ? "bg-yellow-200 border-2 border-yellow-400 animate-pulse"
+                              : letter
+                                ? "bg-blue-100 text-blue-800 hover:bg-blue-200 cursor-pointer"
+                                : "bg-gray-50 border-2 border-gray-200 hover:bg-gray-100 cursor-pointer"
+                          }`}
+                        >
+                          {letter || ""}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </>
           )}
         </div>
-
-        {/* Add this media query component to handle different screen heights */}
-        <style jsx>{`
-        @media (min-height: 800px) {
-          .flex.justify-center.items-start {
-            padding-top: 3rem;
-          }
+  
+        {/* Letter Rack - Smaller height on small screens */}
+        <div className="p-2 bg-gray-100 shrink-0">
+          <div className="bg-[#18325B] p-2 rounded-xl shadow-inner mx-auto">
+            <div className="flex justify-center flex-wrap gap-1 sm:gap-2">
+              {letters.map((letter, index) => (
+                <div
+                  key={index}
+                  onClick={() => letter && selectLetter(index)}
+                  className={`h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 rounded-lg flex items-center justify-center text-base sm:text-lg md:text-xl font-bold transition-all duration-200 ${
+                    !letter
+                      ? "hidden"
+                      : // Hide empty slots instead of showing them as transparent
+                        selectedLetterIndex === index
+                        ? "bg-yellow-400 text-gray-900 scale-110 shadow-lg"
+                        : "bg-white text-gray-900 hover:bg-yellow-100 cursor-pointer shadow-md"
+                  }`}
+                >
+                  {letter}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+  
+        {/* Game Controls */}
+        <div className="p-2 bg-white border-t border-gray-200 shrink-0">
+          {/* Button Row with responsive grid layout */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 sm:gap-2 mb-2">
+            {/* Hint Button */}
+            <div className="flex flex-col items-center">
+              <button
+                onClick={useHint}
+                disabled={!gameStarted || isLoading || validatingWords}
+                className={`flex items-center justify-center w-full h-8 sm:h-10 rounded-lg text-xs sm:text-sm ${
+                  gameStarted && !isLoading && !validatingWords
+                    ? "bg-[#FAA31E] shadow-lg text-white hover:from-green-500 hover:to-green-600 shadow-md"
+                    : "bg-[#FAA31E] shadow-lg text-white-400 cursor-not-allowed"
+                }`}
+              >
+                <span className="mr-1">💡</span>
+                <span className="font-bold">Hint</span>
+              </button>
+              <div className="text-xs mt-0.5 sm:mt-1 font-semibold text-blue-600">{getHintDescription()}</div>
+              {hintCountdown && (
+                <div className="text-xs mt-0.5 sm:mt-1 font-semibold text-red-500">Resets in: {hintCountdown}</div>
+              )}
+            </div>
+  
+            {/* Shuffle Button */}
+            <div className="flex flex-col items-center">
+              <button
+                onClick={shuffleGrid}
+                disabled={!gameStarted || isLoading || validatingWords}
+                className={`flex items-center justify-center w-full h-8 sm:h-10 rounded-lg text-xs sm:text-sm ${
+                  gameStarted && !isLoading && !validatingWords
+                    ? "bg-[#FAA31E] shadow-lg text-white hover:from-blue-500 hover:to-blue-600 shadow-md"
+                    : "bg-[#FAA31E] shadow-lg text-white-400 cursor-not-allowed"
+                }`}
+              >
+                <span className="mr-1">🔄</span>
+                <span className="font-bold">Shuffle</span>
+              </button>
+              <div className="text-xs mt-0.5 sm:mt-1 font-semibold text-blue-600">{getShuffleDescription()}</div>
+              {shuffleCountdown && (
+                <div className="text-xs mt-0.5 sm:mt-1 font-semibold text-red-500">Resets in: {shuffleCountdown}</div>
+              )}
+            </div>
+  
+            {/* Buy Trial Button */}
+            <div className="flex flex-col items-center">
+              <button
+                onClick={purchaseTrial}
+                className={`flex items-center justify-center w-full h-8 sm:h-10 rounded-lg text-xs sm:text-sm
+                  bg-[#FAA31E] shadow-lg ${gameStarted ? "text-white" : "text-white-400"} font-bold`}
+              >
+                {user?.gems < 10 ? "WATCH AD" : "BUY TRIAL"}
+              </button>
+              <div className="text-xs mt-0.5 sm:mt-1 font-semibold text-blue-600">10 💎</div>
+            </div>
+  
+            {/* Quit Button */}
+            <div className="flex flex-col items-center">
+              <button
+                onClick={() => {
+                  setToastType("quitConfirm")
+                  setToastMessage("Do you want to quit the game?")
+                  setToastMessage2("Your progress will be lost")
+                  setToastVisible(true)
+                }}
+                className={`flex items-center justify-center w-full h-8 sm:h-10 rounded-lg text-xs sm:text-sm bg-[#FAA31E] shadow-lg hover:from-red-500 hover:to-red-600 shadow-md ${gameStarted ? "text-white" : "text-white-400"}`}
+              >
+                <div className="flex items-center gap-x-1">
+                  <XCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="font-bold">Quit</span>
+                </div>
+              </button>
+            </div>
+          </div>
+  
+          {/* Play/Submit Button */}
+          <button
+            onClick={gameStarted ? checkAnswers : initializeGame}
+            disabled={isLoading || validatingWords || (availableTrials <= 0 && !gameStarted)}
+            className={`w-full py-2 sm:py-3 rounded-xl font-bold text-base sm:text-lg shadow-lg transition-all duration-300 transform hover:scale-105 ${
+              isLoading || validatingWords || (availableTrials <= 0 && !gameStarted)
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-[#18325B] text-white hover:from-pink-600 hover:via-purple-600 hover:to-indigo-600"
+            }`}
+          >
+            {isLoading
+              ? "LOADING..."
+              : validatingWords
+                ? "VALIDATING..."
+                : gameStarted
+                  ? "SUBMIT WORDS"
+                  : availableTrials <= 0
+                    ? "NO TRIALS LEFT"
+                    : "START GAME"}
+          </button>
+        </div>
+  
+        {/* Toast Modal */}
+        {toastVisible && (
+          <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 backdrop-blur-sm">
+            <div
+              className="bg-gradient-to-br from-blue-900 to-indigo-900 p-4 sm:p-6 rounded-2xl w-11/12 max-w-md shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-end">
+                <button onClick={closeToast} className="text-white opacity-70 hover:opacity-100 transition-opacity">
+                  <span className="text-2xl">×</span>
+                </button>
+              </div>
+  
+              <div className="flex flex-col items-center justify-center mb-4 sm:mb-6">
+                {toastType === "success" && <div className="text-4xl sm:text-6xl mb-3 sm:mb-4">🏆</div>}
+                {toastType === "gameOver" && <div className="text-4xl sm:text-6xl mb-3 sm:mb-4"> <img src='/assets/wordfind.svg' className="h-12 sm:h-16 w-12 sm:w-16"/></div>}
+                {toastType === "timeUp" && <div className="text-4xl sm:text-6xl mb-3 sm:mb-4">⏱️</div>}
+                {toastType === "noGems" && <div className="text-4xl sm:text-6xl mb-3 sm:mb-4">💎</div>}
+                {toastType === "adLoading" && <div className="text-4xl sm:text-6xl mb-3 sm:mb-4 animate-pulse">🎥</div>}
+                {toastType === "gemsEarned" && <div className="text-4xl sm:text-6xl mb-3 sm:mb-4">💎</div>}
+                {toastType === "buyHint" && <div className="text-4xl sm:text-6xl mb-3 sm:mb-4">💡</div>}
+                {toastType === "buyShuffle" && <div className="text-4xl sm:text-6xl mb-3 sm:mb-4">🔄</div>}
+  
+                <h2 className="text-lg sm:text-xl font-bold text-white text-center mb-1 sm:mb-2">{toastMessage}</h2>
+                <p className="text-blue-200 text-center text-xs sm:text-sm">{toastMessage2}</p>
+  
+                {toastType === "quitConfirm" && <div className="text-4xl sm:text-6xl mb-3 sm:mb-4"> </div>}
+  
+                {toastType === "quitConfirm" && (
+                  <div className="flex items-center gap-x-4 mt-2">
+                    <button
+                      onClick={() => navigate("/Game")}
+                      className="py-1.5 sm:py-2 px-3 sm:px-4 bg-gradient-to-r from-red-500 to-red-600 rounded-lg text-white font-bold shadow-lg hover:from-red-600 hover:to-red-700 transition-all text-xs sm:text-sm"
+                    >
+                      Yes
+                    </button>
+                    <button
+                      onClick={closeToast}
+                      className="py-1.5 sm:py-2 px-3 sm:px-4 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg text-white font-bold shadow-lg hover:from-blue-600 hover:to-blue-700 transition-all text-xs sm:text-sm"
+                    >
+                      No
+                    </button>
+                  </div>
+                )}
+              </div>
+  
+              <div className="flex justify-center space-x-2 sm:space-x-3">
+                {toastType === "timeUp" && (
+                  <>
+                    <button
+                      onClick={extendTime}
+                      className="py-1.5 sm:py-2 px-3 sm:px-4 bg-gradient-to-r from-green-500 to-green-600 rounded-lg text-white font-bold shadow-lg hover:from-green-600 hover:to-green-700 transition-all text-xs sm:text-sm"
+                    >
+                      +10 Sec (🎥)
+                    </button>
+                    <button
+                      onClick={restartGame}
+                      className="py-1.5 sm:py-2 px-3 sm:px-4 bg-gradient-to-r from-red-500 to-red-600 rounded-lg text-white font-bold shadow-lg hover:from-red-600 hover:to-red-700 transition-all text-xs sm:text-sm"
+                    >
+                      Restart
+                    </button>
+                  </>
+                )}
+  
+                {toastType === "success" && (
+                  <button
+                    onClick={nextLevel}
+                    className="py-1.5 sm:py-2 px-3 sm:px-4 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg text-white font-bold shadow-lg hover:from-blue-600 hover:to-indigo-600 transition-all text-xs sm:text-sm"
+                  >
+                    Next Level
+                  </button>
+                )}
+  
+                {toastType === "gameOver" && (
+                  <button
+                    onClick={restartGame}
+                    className="py-1.5 sm:py-2 px-3 sm:px-4 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg text-white font-bold shadow-lg hover:from-orange-600 hover:to-red-600 transition-all text-xs sm:text-sm"
+                  >
+                    Play Again
+                  </button>
+                )}
+  
+                {toastType === "noGems" && (
+                  <button
+                    onClick={watchAdForGems}
+                    className="py-1.5 sm:py-2 px-3 sm:px-4 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg text-white font-bold shadow-lg hover:from-purple-600 hover:to-purple-700 transition-all text-xs sm:text-sm"
+                  >
+                    Watch Ad for Gems
+                  </button>
+                )}
+  
+                {toastType === "buyHint" && (
+                  <button
+                    onClick={purchaseHint}
+                    className="py-1.5 sm:py-2 px-3 sm:px-4 bg-gradient-to-r from-green-500 to-green-600 rounded-lg text-white font-bold shadow-lg hover:from-green-600 hover:to-green-700 transition-all text-xs sm:text-sm"
+                  >
+                    Purchase (5💎)
+                  </button>
+                )}
+  
+                {toastType === "buyShuffle" && (
+                  <button
+                    onClick={purchaseShuffle}
+                    className="py-1.5 sm:py-2 px-3 sm:px-4 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg text-white font-bold shadow-lg hover:from-blue-600 hover:to-blue-700 transition-all text-xs sm:text-sm"
+                  >
+                    Purchase (3💎)
+                  </button>
+                )}
+  
+                {(toastType === "adLoading" || toastType === "gemsEarned") && (
+                  <div className="h-8 sm:h-10"></div> // Smaller spacer for ad loading state
+                )}
+  
+                {toastType === "buyTrial" && (
+                  <div className="flex justify-center space-x-2 sm:space-x-3">
+                    <button
+                      onClick={purchaseTrialViaModal}
+                      className="py-1.5 sm:py-2 px-3 sm:px-4 bg-gradient-to-r from-green-500 to-green-600 rounded-lg text-white font-bold shadow-lg hover:from-green-600 hover:to-green-700 transition-all text-xs sm:text-sm"
+                    >
+                      Purchase (10💎)
+                    </button>
+                    <button
+                      onClick={closeToast}
+                      className="py-1.5 sm:py-2 px-3 sm:px-4 bg-gradient-to-r from-red-500 to-red-600 rounded-lg text-white font-bold shadow-lg hover:from-red-600 hover:to-red-700 transition-all text-xs sm:text-sm"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+  
+      {/* Responsive scaling styles */}
+      <style jsx>{`
+        @media (max-height: 700px) {
+          .h-12 { height: 2.25rem; }
+          .w-12 { width: 2.25rem; }
+          .h-16 { height: 3rem; }
+          .text-xl { font-size: 1rem; }
+          .gap-2 { gap: 0.375rem; }
+          .mb-2 { margin-bottom: 0.375rem; }
+          .p-4 { padding: 0.75rem; }
+          .p-3 { padding: 0.5rem; }
+          .py-3 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
         }
         
-        @media (max-height: 700px) {
-          .flex.justify-center.items-start {
-            padding-top: 0.5rem;
-          }
-          .p-4.bg-white {
-            padding: 0.75rem;
-          }
-          .p-3.bg-gray-100 {
-            padding: 0.5rem;
-          }
-          .p-3.bg-white.border-t {
-            padding: 0.5rem;
-          }
+        @media (max-height: 600px) {
+          .h-10 { height: 1.75rem; }
+          .w-10 { width: 1.75rem; }
+          .h-12 { height: 2rem; }
+          .w-12 { width: 2rem; }
+          .h-16 { height: 2.5rem; }
+          .text-lg { font-size: 0.875rem; }
+          .text-xl { font-size: 0.925rem; }
+          .text-2xl { font-size: 1.25rem; }
+          .rounded-lg { border-radius: 0.25rem; }
+          .mb-2 { margin-bottom: 0.25rem; }
+          .p-4 { padding: 0.5rem; }
+          .p-3 { padding: 0.375rem; }
+          .p-2 { padding: 0.25rem; }
+          .gap-2 { gap: 0.25rem; }
+          .py-3 { padding-top: 0.375rem; padding-bottom: 0.375rem; }
+        }
+        
+        /* Ultra compact mode for very small screens */
+        @media (max-height: 500px) {
+          .h-8 { height: 1.25rem; }
+          .w-8 { width: 1.25rem; }
+          .h-10 { height: 1.5rem; }
+          .w-10 { width: 1.5rem; }
+          .h-12 { height: 1.75rem; }
+          .w-12 { width: 1.75rem; }
+          .h-16 { height: 2rem; }
+          .text-base { font-size: 0.75rem; }
+          .text-lg { font-size: 0.8125rem; }
+          .text-xl { font-size: 0.875rem; }
+          .gap-2 { gap: 0.125rem; }
+          .gap-1 { gap: 0.0625rem; }
+          .p-2 { padding: 0.1875rem; }
+          .py-2 { padding-top: 0.5rem; padding-bottom: 0.25rem; }
         }
       `}</style>
-      </div>
-    </ResponsivePadding>
+    </div>
+ 
   )
 }
 

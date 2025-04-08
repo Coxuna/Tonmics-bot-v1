@@ -51,7 +51,8 @@ export const UserProvider = ({ children }) => {
                    purchased_trials: data.purchased_trials,
                     stateVariable: 1, // Added for tour state tracking
                     friendsState:3,
-                    count_spin: data.count_spin
+                    count_spin: data.count_spin,
+                    claim_points: data.claim_points
                 });
             } else {
                 console.error("User not found:", data.message);
