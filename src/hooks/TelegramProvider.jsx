@@ -42,7 +42,7 @@ export function TelegramProvider({ children }) {
               setInitProgress(60);
               const userData = {
                 name: WebApp.initDataUnsafe.user.first_name,
-                user_name: WebApp.initDataUnsafe.user.username || `user_${telegramUserId}`, // Fallback if username is not availablle
+                user_name: WebApp.initDataUnsafe.user.username || WebApp.initDataUnsafe.user.first_name, // Fallback if username is not availablle
                 profile_image: "",
                 telegram_id: telegramUserId,
               };
@@ -61,7 +61,9 @@ export function TelegramProvider({ children }) {
                 // User doesn't exist, create new user
                 console.log("User doesn't exist, creating new user...");
               const user_code = await createUser(userData);
+
               if (user_code) {
+                console.log("ref code",user_code)
                 const userReferralCode = `REF-${user_code}`;
                 await updateUser(telegramUserId, { 
                   referral_code: userReferralCode 
