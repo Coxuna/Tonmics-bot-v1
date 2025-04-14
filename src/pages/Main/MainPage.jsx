@@ -60,6 +60,13 @@ const MainPage = () => {
                   </div>
                 </div>
 
+{/*         <div className="bg-[#D72B29] p-[4px] mb-1 cursor-pointer" onClick={()=>{navigate("/Star")}}>
+                  <div className="border border-white p-1">
+                    <span className="text-white text-sm">Store</span>
+                  </div>
+                </div>
+                */}
+        
                 <ConnectButton/>
               </div>
               

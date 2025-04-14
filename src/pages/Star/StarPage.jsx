@@ -5,7 +5,8 @@ import { useUser } from '../../hooks/UserProvider';
 import PaymentConfirmationModal from '../../components/Star/PaymentConfirmModal';
 import megaPackages from '../../components/Star/megaPackages';
 import exclusivePackages from '../../components/Star/exclusivePackages';
-import {beginCell} from'@ton/ton';
+import {toNano, beginCell} from '@ton/ton'
+import ResponsivePadding from '../../components/shared/ResponsivePadding';
 // Smart contract configuration
 const CONTRACT_ADDRESS = 'EQAqGyYfyIZuseIhybZ1ZrgcepNZxol7zaPf_p37s-iQrxC9'; // Replace with actual contract address
 
@@ -23,12 +24,8 @@ const RewardsPanel = () => {
   // Get user context for updating user data
   const { user, updateUser } = useUser();
   
-  
 
   const currentPackages = activeTab === 'mega' ? megaPackages : exclusivePackages;
-  function toNano(amount) {
-    return BigInt(Math.floor(parseFloat(amount) * 1e9));
-  }
 
   const handleUnlock = (packageItem) => {
     if (!userAddress) {
@@ -46,57 +43,88 @@ const RewardsPanel = () => {
     setSelectedPackage(null);
     setErrorMessage('');
   };
-
   const handleConfirmPayment = async () => {
-    if (!selectedPackage || !userAddress) return;
-    
+    console.log('⚡ DEBUG: handleConfirmPayment triggered');
+  
+    if (!selectedPackage || !userAddress) {
+      console.error("❌ Missing selectedPackage or userAddress");
+      setErrorMessage("Something went wrong. Missing package or address.");
+      return;
+    }
+  
     setIsProcessing(true);
     setErrorMessage('');
-    
+  
     try {
       const packageAmount = toNano(selectedPackage.tonAmount);
-      
-      // Create payload cell for contract interaction
       const methodName = activeTab === 'mega' ? 'BuyMegaPackage' : 'BuyExclusive';
-      
-      // Create the payload cell with the method and parameters
-      const payload = beginCell()
-        .storeUint(0, 32) // op code for comment
-        .storeString(methodName + ":" + selectedPackage.id)
-        .endCell();
-      
-      // Convert cell to base64 encoded BOC
-      const payloadBase64 = payload.toBoc().toString('base64');
-      
-      // Transaction structure according to TON Connect docs
-      const result = await tonConnectUI.sendTransaction({
-        validUntil: Math.floor(Date.now() / 1000) + 360, // Valid for 6 minutes
-        network: 'testnet', // Specify testnet!
-        messages: [
-          {
-            address: CONTRACT_ADDRESS,
-            amount: packageAmount.toString(),
-            payload: payloadBase64
-          }
-        ]
-      });
-      
-      console.log('Transaction result:', result);
-      
-      // After successful transaction, update user data in your system
-      if (result) {
-        await updateUser(user?.telegram_id, {
-          gems: user.gems + selectedPackage.gems,
-          tms_points: user.tms_points + selectedPackage.tmsPoints,
-          t_keys: user.t_keys + selectedPackage.keys
-        });
-        
-        // Close modal and show success notification
-        setShowPaymentModal(false);
-        alert(`Successfully purchased ${selectedPackage.title}!`);
+      const commandString = methodName + ":" + selectedPackage.id;
+  
+      console.log("✅ Selected package:", selectedPackage);
+      console.log("👤 User address:", userAddress);
+      console.log("🔧 Method name:", methodName);
+      console.log("💬 Command string:", commandString);
+      console.log("💰 TON amount in nano:", packageAmount.toString());
+  
+      // Build the payload
+      let payload, payloadBase64;
+      try {
+        payload = beginCell()
+          .storeUint(0, 32) // Op code for comment
+          .storeBuffer(Buffer.from(commandString))
+          .endCell();
+        payloadBase64 = payload.toBoc().toString('base64');
+        console.log("📦 Payload base64:", payloadBase64);
+      } catch (err) {
+        console.error("❌ Error creating payload:", err);
+        setErrorMessage("Failed to create transaction payload.");
+        setIsProcessing(false);
+        return;
       }
+  
+      // Transaction sending
+      let result;
+      try {
+        console.log("🚀 Sending transaction...");
+        result = await tonConnectUI.sendTransaction({
+          validUntil: Math.floor(Date.now() / 1000) + 360, // Valid for 6 minutes
+          network: 'testnet',
+          messages: [
+            {
+              address: CONTRACT_ADDRESS,
+              amount: packageAmount.toString(),
+              payload: payloadBase64
+            }
+          ]
+        });
+        console.log("✅ Transaction result:", result);
+      } catch (e) {
+        console.error("❌ sendTransaction threw error:", e);
+        setErrorMessage("Transaction failed or was rejected by wallet.");
+        setIsProcessing(false);
+        return;
+      }
+  
+      if (!result) {
+        console.warn("⚠️ No result returned from transaction. Possibly cancelled.");
+        setErrorMessage("No response from wallet. Transaction may have been cancelled.");
+        setIsProcessing(false);
+        return;
+      }
+  
+      // Success flow
+      console.log("🎉 Updating user data...");
+      await updateUser(user?.telegram_id, {
+        gems: user.gems + selectedPackage.gems,
+        tms_points: user.tms_points + selectedPackage.tmsPoints,
+        t_keys: user.t_keys + selectedPackage.keys
+      });
+  
+      setShowPaymentModal(false);
+      alert(`✅ Successfully purchased ${selectedPackage.title}!`);
+      
     } catch (error) {
-      console.error('Transaction failed:', error);
+      console.error("🔥 Unexpected error in handleConfirmPayment:", error);
       if (error.message && error.message.includes('Wallet declined')) {
         setErrorMessage('Transaction was declined by the wallet.');
       } else {
@@ -104,15 +132,22 @@ const RewardsPanel = () => {
       }
     } finally {
       setIsProcessing(false);
+      console.log("🧹 Done processing payment");
     }
   };
+  
 
   return (
-    <div className="absolute w-full min-h-screen bg-gradient-radial from-[#FAA31E] to-[#D72B29] flex items-center justify-center p-4">
-      <img className="absolute w-full h-full object-cover -z-50" src="/assets/secondbackground.webp" alt="Background" />
+    <ResponsivePadding>
+     <div className="flex justify-center items-start overflow-auto py-1 px-4 pb-12 w-full min-h-screen">
+     <img
+            className="fixed w-full h-full object-cover top-0 left-0 -z-10"
+            src="/assets/secondbackground.webp"
+            alt="Background"
+          />
       
       <div className="flex flex-col items-center justify-center w-full max-w-xl px-6 py-10">
-        <img src='/star.png' alt="Star" className="mb-4 w-40 h-40" style={{marginBottom:'30px'}}/>
+        <img src='/star.png' alt="Star" className="mb-4 w-30 h-25" style={{marginBottom:'30px'}}/>
         
         <div className="text-white text-center font-bold text-2xl uppercase mb-6" style={{marginBottom:'20px'}}>
           Get Your Star Packages
@@ -165,6 +200,7 @@ const RewardsPanel = () => {
         />
       )}
     </div>
+    </ResponsivePadding>
   );
 };
 

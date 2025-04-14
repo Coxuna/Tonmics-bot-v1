@@ -14,10 +14,16 @@ export default defineConfig(({ mode }) => {
       fs: {
         allow: ['./'],
       },
-      allowedHosts: ['uncommon-urgently-ant.ngrok-free.app'], // Add this line
+      allowedHosts: ['uncommon-urgently-ant.ngrok-free.app'],
     },
     define: {
       __API_URL__: JSON.stringify(env.VITE_API_URL),
+      global: 'window',
     },
+    resolve: {
+      alias: {
+        buffer: 'buffer',
+      },
+    }
   }
 })

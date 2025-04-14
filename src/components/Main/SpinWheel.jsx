@@ -2,30 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import Toast from "./ToastModal";
 import { useUser } from '../../hooks/UserProvider';
 
-// Helper function to safely parse timestamp from database
-const parseStoredTimestamp = (storedTime) => {
-  if (!storedTime) return null;
-  
-  // If it's already a number, return it
-  if (typeof storedTime === 'number') return storedTime;
-  
-  try {
-    // If it's an ISO string
-    if (typeof storedTime === 'string' && storedTime.includes('T')) {
-      return new Date(storedTime).getTime();
-    }
-    
-    // If it's a formatted date string
-    const dateStr = storedTime.includes('T') ? storedTime : storedTime.replace(' ', 'T');
-    // Add Z to ensure UTC interpretation if not already present
-    const utcDateStr = dateStr.endsWith('Z') ? dateStr : `${dateStr}Z`;
-    return new Date(utcDateStr).getTime();
-  } catch (error) {
-    console.error("Error parsing timestamp:", error);
-    return null;
-  }
-};
-
 const SpinTheWheel = () => {
   const { user, updateUser } = useUser();
 
@@ -33,10 +9,8 @@ const SpinTheWheel = () => {
   const spinElRef = useRef(null);
   const [spinButtonClicked, setSpinButtonClicked] = useState(false);
 
-  // Enhanced spin tracking states
-  const [spinsLeft, setSpinsLeft] = useState(15);
-  const [lastSpinTime, setLastSpinTime] = useState(null);
-  const [spinCountdown, setSpinCountdown] = useState("");
+  // Simplified spin tracking states
+  const [spinsLeft, setSpinsLeft] = useState(0);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [toastMessage2, setToastMessage2] = useState("Keep spinning to win more daily");
@@ -63,128 +37,23 @@ const SpinTheWheel = () => {
   const [angVel, setAngVel] = useState(0);
   const [ang, setAng] = useState(0);
 
-  // Load user spin data when user is available
+  // Load user spin data when user is available - simplified
   useEffect(() => {
     if (user && user.telegram_id) {
-      console.log("Setting user spin data:", user.spin_count, user.last_spin);
-      
-      // Fix: Make sure we properly handle different data types
-      const spinCount = user.spin_count !== undefined && user.spin_count !== null ? Number(user.spin_count) : 3;
+      console.log("Setting user spin data:", user.spin_count);
+      // Just load the spin count directly, no need for timestamp logic
+      const spinCount = user.spin_count !== undefined && user.spin_count !== null ? Number(user.spin_count) : 0;
       setSpinsLeft(spinCount);
-      
-      // Parse the stored timestamp correctly
-      if (user.last_spin === null || user.last_spin === undefined) {
-        setLastSpinTime(null);
-      } else {
-        const parsedLastSpin = parseStoredTimestamp(user.last_spin);
-        setLastSpinTime(parsedLastSpin);
-      }
     }
   }, [user]);
 
-  // Timer effect to check and reset spins
-  useEffect(() => {
-    if (!user) {
-      // Don't run the timer until we have proper data
-      return;
-    }
-  
-    // Only start timer if lastSpinTime exists
-    if (lastSpinTime) {
-      const checkAndUpdateTimer = () => {
-        const now = Date.now();
-        const timeElapsed = now - lastSpinTime;
-        // Reset after 24 hours (24 * 60 * 60 * 1000 ms)
-        const timeRemaining = 24 * 60 * 60 * 1000 - timeElapsed;
-        console.log("Time remaining for spin reset:", timeRemaining);
-        
-        if (timeRemaining <= 0) {
-          // Reset spins to 15
-          setSpinsLeft(15);
-          setLastSpinTime(null);
-          setSpinCountdown("");
-          setShowOutOfSpins(false);
-          
-          // Update database
-          updateUser(user?.telegram_id, { 
-            spin_count: 15,
-            last_spin: null
-          });
-        } else {
-          // Update countdown display with hours, minutes, and seconds
-          const hours = Math.floor(timeRemaining / (60 * 60 * 1000));
-          const minutes = Math.floor((timeRemaining % (60 * 60 * 1000)) / (60 * 1000));
-          const seconds = Math.floor((timeRemaining % (60 * 1000)) / 1000);
-          
-          // Format with leading zeros for better readability
-          const formattedHours = String(hours).padStart(2, '0');
-          const formattedMinutes = String(minutes).padStart(2, '0');
-          const formattedSeconds = String(seconds).padStart(2, '0');
-          
-          setSpinCountdown(`${formattedHours}h ${formattedMinutes}m ${formattedSeconds}s`);
-        }
-      };
-      
-      // Initial check
-      checkAndUpdateTimer();
-      
-      // Set interval to update every second
-      const interval = setInterval(checkAndUpdateTimer, 1000);
-      
-      return () => clearInterval(interval);
-    } else {
-      // Clear any countdown if lastSpinTime is null
-      setSpinCountdown("");
-    }
-  }, [lastSpinTime, user]);
-  
-  const drawSector = (ctx, sector, i) => {
-    const ang = arc * i;
-    const radius = ctx.canvas.width / 2;
-    
-    ctx.save();
-    // COLOR
-    ctx.beginPath();
-    ctx.fillStyle = sector.color;
-    ctx.moveTo(radius, radius);
-    ctx.arc(radius, radius, radius, ang, ang + arc);
-    ctx.lineTo(radius, radius);
-    ctx.fill();
-    
-    // TEXT
-    ctx.translate(radius, radius);
-    ctx.rotate(ang + arc / 2);
-    ctx.textAlign = "right";
-    ctx.fillStyle = sector.text;
-    ctx.font = "bold 14px 'Adventure', monospace";
-    ctx.fillText(sector.label, radius - 10, 10);
-    
-    ctx.restore();
-  };
-
-  // Modified getIndex to match the original implementation
-  const getIndex = () => {
-    return Math.floor(tot - (ang / TAU) * tot) % tot;
-  };
-
-  const rotate = (ctx, currentAng) => {
-    ctx.canvas.style.transform = `rotate(${currentAng - PI / 2}rad)`;
-    
-    if (spinElRef.current) {
-      spinElRef.current.innerHTML = `<span>Spin</span>`;
-      spinElRef.current.style.background = "white";
-      spinElRef.current.style.color = "black";
-    }
-  };
-
+  // Simplified wheel drawing and animation logic
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
     const ctx = canvas.getContext('2d');
-    const dia = canvas.width;
-    const rad = dia / 2;
-  
+    
     // Initial draw
     sectors.forEach((sector, i) => drawSector(ctx, sector, i));
     rotate(ctx, ang);
@@ -192,9 +61,7 @@ const SpinTheWheel = () => {
     // Animation loop
     let rafId;
     
-    // Define the engine function
     const engine = () => {
-      // If spinning and velocity is low enough to stop
       if (angVel < 0.002 && spinButtonClicked) {
         setAngVel(0); // Stop completely
         
@@ -252,6 +119,45 @@ const SpinTheWheel = () => {
       cancelAnimationFrame(rafId);
     };
   }, [ang, angVel, spinButtonClicked, user]);
+
+  const drawSector = (ctx, sector, i) => {
+    const ang = arc * i;
+    const radius = ctx.canvas.width / 2;
+    
+    ctx.save();
+    // COLOR
+    ctx.beginPath();
+    ctx.fillStyle = sector.color;
+    ctx.moveTo(radius, radius);
+    ctx.arc(radius, radius, radius, ang, ang + arc);
+    ctx.lineTo(radius, radius);
+    ctx.fill();
+    
+    // TEXT
+    ctx.translate(radius, radius);
+    ctx.rotate(ang + arc / 2);
+    ctx.textAlign = "right";
+    ctx.fillStyle = sector.text;
+    ctx.font = "bold 14px 'Adventure', monospace";
+    ctx.fillText(sector.label, radius - 10, 10);
+    
+    ctx.restore();
+  };
+
+  // Get the index of the sector
+  const getIndex = () => {
+    return Math.floor(tot - (ang / TAU) * tot) % tot;
+  };
+
+  const rotate = (ctx, currentAng) => {
+    ctx.canvas.style.transform = `rotate(${currentAng - PI / 2}rad)`;
+    
+    if (spinElRef.current) {
+      spinElRef.current.innerHTML = `<span>Spin</span>`;
+      spinElRef.current.style.background = "white";
+      spinElRef.current.style.color = "black";
+    }
+  };
   
   const handleSpin = () => {
     // Check if user is logged in
@@ -268,7 +174,7 @@ const SpinTheWheel = () => {
     if (spinsLeft <= 0) {
       setShowOutOfSpins(true);
       setToastMessage("You're out of spins!");
-      setToastMessage2(`Watch an ad to earn more spins${spinCountdown ? `. Free spins reset in ${spinCountdown}` : ''}`);
+      setToastMessage2("Watch an ad to earn more spins or wait for tomorrow's refresh at 12 UTC");
       setResponseType("Try again");
       setShowToast(true);
       return;
@@ -285,13 +191,12 @@ const SpinTheWheel = () => {
     }
   };
 
-  // Utility function to generate random number in range (matching original)
+  // Utility function to generate random number in range
   const rand = (m, M) => Math.random() * (M - m) + m;
 
-  // Modified finalizeSpinResult to handle user updates
+  // Simplified finalizeSpinResult - only updates spin count and rewards
   const finalizeSpinResult = (finalSector) => {
     const newSpinCount = spinsLeft - 1;
-    const currentTime = Date.now();
 
     // Prepare update object
     const updateObj = {
@@ -312,19 +217,13 @@ const SpinTheWheel = () => {
     } else if (finalSector.responseType === "1 Key") {
       updateObj.t_keys = (user.t_keys || 0) + 1;
     }
-   
-    // If this was the last spin, set the timer
-    if (newSpinCount === 0) {
-      setLastSpinTime(currentTime);
-      updateObj.last_spin = currentTime;
-    }
 
     // Update user data
     if (user && user.telegram_id) {
       updateUser(user.telegram_id, updateObj);
     }
 
-    // Update local states
+    // Update local state
     setSpinsLeft(newSpinCount);
   };
 
@@ -355,6 +254,7 @@ const SpinTheWheel = () => {
         alert('Error playing ad');
       });
   };
+
   return (
     <div className="relative w-full max-w-[400px] mx-auto flex justify-center items-center">
       <div className="bg-[#18325B] p-[20px] rounded-full relative">
@@ -366,7 +266,6 @@ const SpinTheWheel = () => {
         
         {/* Top indicator (marker for the winning position) */}
         <div 
-        
           className="absolute top-10 left-[48.5%] transform -translate-x-1/2 -translate-y-1/2 z-20 w-0 h-0"
           style={{
             borderLeft: '7px solid transparent',
@@ -393,6 +292,11 @@ const SpinTheWheel = () => {
           >
             <span className="text-black">Spin</span>
           </div>
+        </div>
+
+        {/* Spins remaining counter */}
+        <div className="absolute bottom-[-30px] left-1/2 transform -translate-x-1/2 bg-white py-2 px-4 rounded-full text-black font-bold">
+          {spinsLeft} Spins Left Today
         </div>
 
         {/* Toast Component */}

@@ -1,5 +1,4 @@
+// Create a new file: src/polyfills.js
 import { Buffer } from 'buffer';
-
-if (typeof window !== 'undefined' && !window.Buffer) {
-  window.Buffer = Buffer;
-}
+window.Buffer = Buffer;
+global = window;
