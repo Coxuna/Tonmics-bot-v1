@@ -22,7 +22,7 @@ const FarmPage = () => {
   const intervalRef = useRef(null);
 
   // Configurable farming settings - 4 hours for farming, 10 minutes for claiming
-  const FARM_INTERVAL = 4 * 60  * 60 * 1000; // 4 hours farming duration
+  const FARM_INTERVAL = 4 * 60 * 60 * 1000; // 4 hours farming duration
   const CLAIM_DURATION = 20 * 60 * 1000; // 10 minutes claim duration
 
   // Dynamic level calculation function

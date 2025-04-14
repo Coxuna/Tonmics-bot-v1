@@ -27,7 +27,6 @@ const parseStoredTimestamp = (storedTime) => {
 };
 
 const SpinTheWheel = () => {
-  // Use user context
   const { user, updateUser } = useUser();
 
   const canvasRef = useRef(null);
@@ -43,24 +42,12 @@ const SpinTheWheel = () => {
   const [toastMessage2, setToastMessage2] = useState("Keep spinning to win more daily");
   const [responseType, setResponseType] = useState("");
   const [showOutOfSpins, setShowOutOfSpins] = useState(false);
-  const [targetEndAngle, setTargetEndAngle] = useState(null);
-  const [targetSectorIndex, setTargetSectorIndex] = useState(null);
-  const [initialSpin, setInitialSpin] = useState(true);
-  const [targetPosition, setTargetPosition] = useState(0);
-  // This is the position where the wheel will stop, we'll calculate from sectors
-  const [fixedStopPosition, setFixedStopPosition] = useState(0);
-  
-  // Track if we've calculated the fixed position yet
-  const [fixedPositionSet, setFixedPositionSet] = useState(false);
-  
-  // Add an indicator reference for the top position marker
-  const topIndicatorRef = useRef(null);
 
   const sectors = [
     { color: "black", text: "#fff", label: "Try again", responseType: "Try again" },
-    { color: "white", text: "#000", label: "2 Gems 💎", responseType: "2 Gems" },
+    { color: "white", text: "#000", label: "5 Diamond 💎", responseType: "5 Diamond" },
     { color: "black", text: "#fff", label: "1 Key 🔑", responseType: "1 Key" },
-    { color: "white", text: "#000", label: "Try again", responseType: "Try again " },
+    { color: "white", text: "#000", label: "Try again", responseType: "Try again" },
     { color: "black", text: "#fff", label: "2 Keys 🔑", responseType: "2 Keys" },
     { color: "white", text: "#000", label: "20 Tonmics", responseType: "20 Tonmics" },
     { color: "black", text: "#fff", label: "Try again", responseType: "Try again" },
@@ -69,23 +56,12 @@ const SpinTheWheel = () => {
 
   const tot = sectors.length;
   const friction = 0.991;
-  const TAU = 2 * Math.PI;
+  const PI = Math.PI;
+  const TAU = 2 * PI;
   const arc = TAU / sectors.length;
-  
-  // Define the top position (90 degrees in radians)
-  const TOP_POSITION = Math.PI / 2;
 
   const [angVel, setAngVel] = useState(0);
   const [ang, setAng] = useState(0);
-
-  useEffect(() => {
-    if (!fixedPositionSet) {
-      // Initialize with the first sector at the top
-      setFixedStopPosition(0);
-      setFixedPositionSet(true);
-      console.log("Fixed stop position initialized");
-    }
-  }, [fixedPositionSet]);
 
   // Load user spin data when user is available
   useEffect(() => {
@@ -163,21 +139,21 @@ const SpinTheWheel = () => {
   }, [lastSpinTime, user]);
   
   const drawSector = (ctx, sector, i) => {
+    const ang = arc * i;
     const radius = ctx.canvas.width / 2;
-    const angle = arc * i;
     
     ctx.save();
     // COLOR
     ctx.beginPath();
     ctx.fillStyle = sector.color;
     ctx.moveTo(radius, radius);
-    ctx.arc(radius, radius, radius, angle, angle + arc);
+    ctx.arc(radius, radius, radius, ang, ang + arc);
     ctx.lineTo(radius, radius);
     ctx.fill();
     
     // TEXT
     ctx.translate(radius, radius);
-    ctx.rotate(angle + arc / 2);
+    ctx.rotate(ang + arc / 2);
     ctx.textAlign = "right";
     ctx.fillStyle = sector.text;
     ctx.font = "bold 14px 'Adventure', monospace";
@@ -186,32 +162,25 @@ const SpinTheWheel = () => {
     ctx.restore();
   };
 
+  // Modified getIndex to match the original implementation
   const getIndex = () => {
-    const normalizedAng = (TAU - ang) % TAU;
-    return Math.floor((normalizedAng / TAU) * tot);
+    return Math.floor(tot - (ang / TAU) * tot) % tot;
   };
 
   const rotate = (ctx, currentAng) => {
-    ctx.canvas.style.transform = `rotate(${currentAng}rad)`;
-  };
-
-  // Add a function to determine which sector is at the top (90 degrees)
-  const getSectorAtTopPosition = (currentAngle) => {
-    // Calculate which sector is at the top position (90 degrees)
-    // TOP_POSITION is PI/2 (90 degrees)
-    // We need to find which sector contains the angle currentAngle + TOP_POSITION
+    ctx.canvas.style.transform = `rotate(${currentAng - PI / 2}rad)`;
     
-    // Normalize the angle to ensure it's within 0 to TAU
-    const normalizedAngle = (currentAngle + TOP_POSITION) % TAU;
-    
-    // Calculate sector index
-    const sectorIndex = Math.floor((normalizedAngle / TAU) * tot);
-    
-    return sectors[sectorIndex];
+    if (spinElRef.current) {
+      spinElRef.current.innerHTML = `<span>Spin</span>`;
+      spinElRef.current.style.background = "white";
+      spinElRef.current.style.color = "black";
+    }
   };
 
   useEffect(() => {
     const canvas = canvasRef.current;
+    if (!canvas) return;
+    
     const ctx = canvas.getContext('2d');
     const dia = canvas.width;
     const rad = dia / 2;
@@ -232,10 +201,11 @@ const SpinTheWheel = () => {
         // The wheel has stopped at its current position
         console.log('Wheel has stopped!');
         
-        // Determine which sector is at the top (90 degrees)
-        const finalSector = getSectorAtTopPosition(ang);
+        // Determine which sector using the original algorithm
+        const finalIndex = getIndex();
+        const finalSector = sectors[finalIndex];
         
-        console.log(`Final Result (sector at top position): ${finalSector.label}`);
+        console.log(`Final Result: ${finalSector.label} (index: ${finalIndex})`);
         
         // Prepare toast message
         if (finalSector.responseType === "Try again") {
@@ -265,6 +235,7 @@ const SpinTheWheel = () => {
         return;
       }
     
+      // Apply friction and update angle
       const newAngVel = angVel * friction;
       const newAng = (ang + newAngVel) % TAU;
     
@@ -280,7 +251,7 @@ const SpinTheWheel = () => {
     return () => {
       cancelAnimationFrame(rafId);
     };
-  }, [ang, angVel, spinButtonClicked, user, fixedStopPosition, arc, TAU, tot, sectors]);
+  }, [ang, angVel, spinButtonClicked, user]);
   
   const handleSpin = () => {
     // Check if user is logged in
@@ -303,24 +274,19 @@ const SpinTheWheel = () => {
       return;
     }
   
-    if (!angVel && fixedPositionSet) {
-      // Generate a random number of full rotations (3-5 rotations for dramatic effect)
-      const fullRotations = Math.floor(Math.random() * 3) + 3; // 3-5 full rotations
+    if (!angVel) {
+      // Using the same random velocity as the original implementation
+      const randomVelocity = rand(0.25, 0.45);
       
-      // Select a random sector to be the winner
-      const randomSectorIndex = Math.floor(Math.random() * sectors.length);
+      console.log(`Spin initiated with velocity: ${randomVelocity}`);
       
-      // Calculate the initial velocity based on the desired number of rotations
-      // With friction 0.991, we need roughly 0.25-0.35 velocity to make 3-5 rotations
-      const spinVelocity = Math.random() * (0.35 - 0.25) + 0.25;
-      
-      console.log(`Spin initiated with velocity: ${spinVelocity}`);
-      console.log(`Target sector index: ${randomSectorIndex}, sector: ${sectors[randomSectorIndex].label}`);
-      
-      setAngVel(spinVelocity);
+      setAngVel(randomVelocity);
       setSpinButtonClicked(true);
     }
   };
+
+  // Utility function to generate random number in range (matching original)
+  const rand = (m, M) => Math.random() * (M - m) + m;
 
   // Modified finalizeSpinResult to handle user updates
   const finalizeSpinResult = (finalSector) => {
@@ -333,8 +299,8 @@ const SpinTheWheel = () => {
     };
 
     // Add specific rewards based on sector
-    if (finalSector.responseType === "2 Gems") {
-      updateObj.gems = (user.gems || 0) + 2;
+    if (finalSector.responseType === "5 Diamond") {
+      updateObj.gems = (user.gems || 0) + 5;
     } else if (finalSector.responseType === "2 Keys") {
       updateObj.t_keys = (user.t_keys || 0) + 2;
     } else if (finalSector.responseType === "50 Tonmics") {
@@ -362,7 +328,6 @@ const SpinTheWheel = () => {
     setSpinsLeft(newSpinCount);
   };
 
-  // Existing toast and ad watching handlers
   const handleCloseToast = () => {
     setShowToast(false);
   };
@@ -390,7 +355,6 @@ const SpinTheWheel = () => {
         alert('Error playing ad');
       });
   };
-
   return (
     <div className="relative w-full max-w-[400px] mx-auto flex justify-center items-center">
       <div className="bg-[#18325B] p-[20px] rounded-full relative">
@@ -402,8 +366,8 @@ const SpinTheWheel = () => {
         
         {/* Top indicator (marker for the winning position) */}
         <div 
-          ref={topIndicatorRef}
-          className="absolute top-11 left-[48.5%] transform -translate-x-1/2 -translate-y-1/2 z-20 w-0 h-0"
+        
+          className="absolute top-10 left-[48.5%] transform -translate-x-1/2 -translate-y-1/2 z-20 w-0 h-0"
           style={{
             borderLeft: '7px solid transparent',
             borderRight: '7px solid transparent',

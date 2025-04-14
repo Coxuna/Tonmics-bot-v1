@@ -1,142 +1,129 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
+import {  useTonAddress, useTonConnectUI } from '@tonconnect/ui-react';
+import ConnectButton from '../../components/Main/TonConnectBtn';
+import { useUser } from '../../hooks/UserProvider';
 import PaymentConfirmationModal from '../../components/Star/PaymentConfirmModal';
+import megaPackages from '../../components/Star/megaPackages';
+import exclusivePackages from '../../components/Star/exclusivePackages';
+import {beginCell} from'@ton/ton';
+// Smart contract configuration
+const CONTRACT_ADDRESS = 'EQAqGyYfyIZuseIhybZ1ZrgcepNZxol7zaPf_p37s-iQrxC9'; // Replace with actual contract address
 
 const RewardsPanel = () => {
   const [activeTab, setActiveTab] = useState('mega');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   
-  const megaPackages = [
-    {
-      title: "🌟 Rising Panel",
-      description: <>🔓 Unlock <strong>400 $TMS Points + 10 Golden Keys</strong></>,
-      price: "50 ⭐ (0.1434 TON)",
-      tonAmount: "0.1434 TON",
-      wide: false
-    },
-    {
-      title: "🛡 Hero's Journey",
-      description: <>🔓 Unlock <strong>Scrabble AI Mode + 20 Gems &amp; 20 Keys</strong></>,
-      price: "200 ⭐ (0.5736 TON)",
-      tonAmount: "0.5736 TON",
-      wide: false
-    },
-    {
-      title: "⚔ Vigilante Vault",
-      description: <>
-        🎮 Play <strong>Scrabble with your best friends</strong><br />
-        🏆 <strong>+100 $TMS Points + 10 Gems &amp; 35 Keys</strong>
-      </>,
-      price: "300 ⭐ (0.8604 TON)",
-      tonAmount: "0.8604 TON",
-      wide: true
-    },
-    {
-      title: "🏅 Legends League",
-      description: <>🎁 Unlock <strong>3500 $TMS Points + 50 Golden Keys</strong></>,
-      price: "800 ⭐ (2.2944 TON)",
-      tonAmount: "2.2944 TON",
-      wide: false
-    }
-  ];
+  // Get user wallet connection
+  const [tonConnectUI] = useTonConnectUI();
+  const userAddress = useTonAddress();
   
-  const exclusivePackages = [
-    {
-      title: "🚀 Cosmic Crossover",
-      description: <>🔓 Unlock <strong>50 Gems</strong></>,
-      price: "500 ⭐",
-      tonAmount: "1.434 TON",
-      wide: false
-    },
-    {
-      title: "💫 Infinity Saga",
-      description: <>🔓 Unlock <strong>100 Gems</strong></>,
-      price: "1,000 ⭐",
-      tonAmount: "2.868 TON",
-      wide: false
-    },
-    {
-      title: "🌌 Omniverse Mastery",
-      description: <>🔓 Unlock <strong>150 Gems</strong></>,
-      price: "1,500 ⭐",
-      tonAmount: "4.302 TON",
-      wide: false
-    },
-    {
-      title: "🔮 Secret Saga",
-      description: <>🔓 Unlock <strong>300 Gems</strong></>,
-      price: "3,000 ⭐",
-      tonAmount: "8.604 TON",
-      wide: false
-    },
-    {
-      title: "⚡ Infinity Warfront",
-      description: <>🔓 Unlock <strong>500 Gems</strong></>,
-      price: "5,000 ⭐",
-      tonAmount: "14.34 TON",
-      wide: false
-    },
-    {
-      title: "🌀 Quantum Rebirth",
-      description: <>🔓 Unlock <strong>1K Gems</strong></>,
-      price: "10,000 ⭐",
-      tonAmount: "28.68 TON",
-      wide: false
-    },
-    {
-      title: "❄ Absolute Zero Hour",
-      description: <>🔓 Unlock <strong>2K Gems</strong></>,
-      price: "20,000 ⭐",
-      tonAmount: "57.36 TON",
-      wide: false
-    },
-    {
-      title: "🛑 The Endgame",
-      description: <>🔓 Unlock <strong>5K Gems</strong></>,
-      price: "50,000 ⭐",
-      tonAmount: "143.4 TON",
-      wide: false
-    },
-    {
-      title: "👑 Tonmics Legend",
-      description: <>🔓 Unlock <strong>10K Gems</strong></>,
-      price: "100,000 ⭐",
-      tonAmount: "286.8 TON",
-      wide: false
-    }
-  ];
+  // Get user context for updating user data
+  const { user, updateUser } = useUser();
+  
+  
 
   const currentPackages = activeTab === 'mega' ? megaPackages : exclusivePackages;
+  function toNano(amount) {
+    return BigInt(Math.floor(parseFloat(amount) * 1e9));
+  }
 
   const handleUnlock = (packageItem) => {
+    if (!userAddress) {
+      alert('Please connect your wallet first');
+      return;
+    }
+    
     setSelectedPackage(packageItem);
     setShowPaymentModal(true);
+    setErrorMessage('');
   };
 
   const handleCloseModal = () => {
     setShowPaymentModal(false);
     setSelectedPackage(null);
+    setErrorMessage('');
   };
 
-  const handleConfirmPayment = () => {
-    // Process payment here
-    console.log(`Processing payment for ${selectedPackage.title} - ${selectedPackage.tonAmount}`);
-    setShowPaymentModal(false);
-    setSelectedPackage(null);
+  const handleConfirmPayment = async () => {
+    if (!selectedPackage || !userAddress) return;
+    
+    setIsProcessing(true);
+    setErrorMessage('');
+    
+    try {
+      const packageAmount = toNano(selectedPackage.tonAmount);
+      
+      // Create payload cell for contract interaction
+      const methodName = activeTab === 'mega' ? 'BuyMegaPackage' : 'BuyExclusive';
+      
+      // Create the payload cell with the method and parameters
+      const payload = beginCell()
+        .storeUint(0, 32) // op code for comment
+        .storeString(methodName + ":" + selectedPackage.id)
+        .endCell();
+      
+      // Convert cell to base64 encoded BOC
+      const payloadBase64 = payload.toBoc().toString('base64');
+      
+      // Transaction structure according to TON Connect docs
+      const result = await tonConnectUI.sendTransaction({
+        validUntil: Math.floor(Date.now() / 1000) + 360, // Valid for 6 minutes
+        network: 'testnet', // Specify testnet!
+        messages: [
+          {
+            address: CONTRACT_ADDRESS,
+            amount: packageAmount.toString(),
+            payload: payloadBase64
+          }
+        ]
+      });
+      
+      console.log('Transaction result:', result);
+      
+      // After successful transaction, update user data in your system
+      if (result) {
+        await updateUser(user?.telegram_id, {
+          gems: user.gems + selectedPackage.gems,
+          tms_points: user.tms_points + selectedPackage.tmsPoints,
+          t_keys: user.t_keys + selectedPackage.keys
+        });
+        
+        // Close modal and show success notification
+        setShowPaymentModal(false);
+        alert(`Successfully purchased ${selectedPackage.title}!`);
+      }
+    } catch (error) {
+      console.error('Transaction failed:', error);
+      if (error.message && error.message.includes('Wallet declined')) {
+        setErrorMessage('Transaction was declined by the wallet.');
+      } else {
+        setErrorMessage('Transaction failed. Please try again.');
+      }
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
     <div className="absolute w-full min-h-screen bg-gradient-radial from-[#FAA31E] to-[#D72B29] flex items-center justify-center p-4">
       <img className="absolute w-full h-full object-cover -z-50" src="/assets/secondbackground.webp" alt="Background" />
       
-      <div className="flex flex-col items-center justify-center w-full max-w-xl px-6 py-10 " >
-        <img src='star.png' alt="Star" className="mb-4 w-40 h-40"  style={{marginBottom:'30px'}}/>
+      <div className="flex flex-col items-center justify-center w-full max-w-xl px-6 py-10">
+        <img src='/star.png' alt="Star" className="mb-4 w-40 h-40" style={{marginBottom:'30px'}}/>
         
         <div className="text-white text-center font-bold text-2xl uppercase mb-6" style={{marginBottom:'20px'}}>
           Get Your Star Packages
         </div>
         
-        <div className="flex w-full max-w-xl mx-auto border-b-2 border-black " style={{marginBottom:'20px'}}>
+        {/* Wallet connection button */}
+        <div className="mb-4">
+          <ConnectButton/>
+        </div>
+        
+        <div className="flex w-full max-w-xl mx-auto border-b-2 border-black" style={{marginBottom:'20px'}}>
           {['mega', 'exclusive'].map((tab) => (
             <div 
               key={tab}
@@ -170,9 +157,11 @@ const RewardsPanel = () => {
         <PaymentConfirmationModal
           isVisible={showPaymentModal}
           packageTitle={selectedPackage.title}
-          packagePrice={selectedPackage.tonAmount}
+          packagePrice={`${selectedPackage.tonAmount} TON`}
           onConfirm={handleConfirmPayment}
           onClose={handleCloseModal}
+          isProcessing={isProcessing}
+          errorMessage={errorMessage}
         />
       )}
     </div>
