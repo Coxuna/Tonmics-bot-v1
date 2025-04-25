@@ -21,39 +21,13 @@ export const UserProvider = ({ children }) => {
             const data = await response.json();
             
             if (response.ok) {
+                console.log(data)
                 setUser({
-                    id: data.id,
-                    t_keys: data.t_keys,
-                    gems: data.gems,
-                    tms_points: data.tms_points,
-                    referral_code: data.referral_code,
-                    name: data.name,
-                    user_name: data.user_name,
-                    telegram_id: data.telegram_id,
-                    profile_image: data.profile_image,
-                    spin_count: data.spin_count,
-                    hint_count: data.hint_count,
-                    shuffle_count: data.shuffle_count,
-                    last_hint: data.last_hint,
-                    last_shuffle: data.last_shuffle,
-                    last_spin: data.last_spin,
-                    last_claim: data.last_claim,
-                    first_time: data.is_first_time,
-                    is_frens_first_time: data.is_frens_first_time,
-                    farming_stage: data.farming_stage,
-                    farming_start_time: data.farming_start_time ,
-                    farming_time_remaining : data.farming_time_remaining,
-                    accumulated_amount: data.accumulated_amount ,
-                    last_farming_update: data.last_farming_update,
-                    jumbo_trials:data.jumbo_trials,
-                   last_jumbo: data.last_jumbo,
-                   free_trials: data.free_trials,
-                   purchased_trials: data.purchased_trials,
-                    stateVariable: 1, // Added for tour state tracking
-                    friendsState:3,
-                    count_spin: data.count_spin,
-                    claim_points: data.claim_points
-                });
+                    ...data,
+                    stateVariable: 1,
+                    friendsState: 3
+                  });
+                  
             } else {
                 console.error("User not found:", data.message);
             }

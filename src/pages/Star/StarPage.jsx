@@ -8,7 +8,6 @@ import exclusivePackages from '../../components/Star/exclusivePackages';
 import {toNano, beginCell} from '@ton/ton'
 import ResponsivePadding from '../../components/shared/ResponsivePadding';
 // Smart contract configuration
-const CONTRACT_ADDRESS = 'EQAqGyYfyIZuseIhybZ1ZrgcepNZxol7zaPf_p37s-iQrxC9'; // Replace with actual contract address
 
 const RewardsPanel = () => {
   const [activeTab, setActiveTab] = useState('mega');
@@ -43,12 +42,25 @@ const RewardsPanel = () => {
     setSelectedPackage(null);
     setErrorMessage('');
   };
+ 
+
+ 
   const handleConfirmPayment = async () => {
     console.log('⚡ DEBUG: handleConfirmPayment triggered');
   
+    // Configuration
+    const RECIPIENT_ADDRESS = "UQCsFgwsaz2cF4jJA2Ns2pM6Wo0D3RkLLpI53vrdZvXUyEcR"; // The destination wallet address
+    
     if (!selectedPackage || !userAddress) {
       console.error("❌ Missing selectedPackage or userAddress");
       setErrorMessage("Something went wrong. Missing package or address.");
+      return;
+    }
+  
+    // Make sure the wallet is connected before proceeding
+    if (!tonConnectUI.connected) {
+      console.error("❌ Wallet not connected");
+      setErrorMessage("Please connect your wallet first.");
       return;
     }
   
@@ -57,85 +69,70 @@ const RewardsPanel = () => {
   
     try {
       const packageAmount = toNano(selectedPackage.tonAmount);
-      const methodName = activeTab === 'mega' ? 'BuyMegaPackage' : 'BuyExclusive';
-      const commandString = methodName + ":" + selectedPackage.id;
   
       console.log("✅ Selected package:", selectedPackage);
       console.log("👤 User address:", userAddress);
-      console.log("🔧 Method name:", methodName);
-      console.log("💬 Command string:", commandString);
+      console.log("📬 Recipient address:", RECIPIENT_ADDRESS);
       console.log("💰 TON amount in nano:", packageAmount.toString());
   
-      // Build the payload
-      let payload, payloadBase64;
+      // Transaction sending with proper error handling
       try {
-        payload = beginCell()
-          .storeUint(0, 32) // Op code for comment
-          .storeBuffer(Buffer.from(commandString))
-          .endCell();
-        payloadBase64 = payload.toBoc().toString('base64');
-        console.log("📦 Payload base64:", payloadBase64);
-      } catch (err) {
-        console.error("❌ Error creating payload:", err);
-        setErrorMessage("Failed to create transaction payload.");
-        setIsProcessing(false);
-        return;
-      }
-  
-      // Transaction sending
-      let result;
-      try {
-        console.log("🚀 Sending transaction...");
-        result = await tonConnectUI.sendTransaction({
-          validUntil: Math.floor(Date.now() / 1000) + 360, // Valid for 6 minutes
+        console.log("🚀 Preparing to send transaction...");
+        
+        // Create a simple transaction request
+        const transactionRequest = {
+          validUntil: Math.floor(Date.now() / 1000) + 60, // Valid for 6 minutes
           network: 'testnet',
           messages: [
             {
-              address: CONTRACT_ADDRESS,
-              amount: packageAmount.toString(),
-              payload: payloadBase64
+              address: RECIPIENT_ADDRESS,
+              amount: packageAmount.toString()
             }
           ]
-        });
+        };
+        
+        console.log("📝 Transaction request:", JSON.stringify(transactionRequest));
+        
+        // Send the transaction
+        const result = await tonConnectUI.sendTransaction(transactionRequest);
+        
         console.log("✅ Transaction result:", result);
+        
+        // Success flow
+        console.log("🎉 Updating user data...");
+        await updateUser(user?.telegram_id, {
+          gems: user.gems + selectedPackage.gems,
+          tms_points: user.tms_points + selectedPackage.tmsPoints,
+          t_keys: user.t_keys + selectedPackage.keys
+        });
+  
+        setShowPaymentModal(false);
+        alert(`✅ Successfully purchased ${selectedPackage.title}!`);
+        
       } catch (e) {
         console.error("❌ sendTransaction threw error:", e);
-        setErrorMessage("Transaction failed or was rejected by wallet.");
+        
+        // More specific error handling
+        if (e.message && e.message.includes('Transaction was not sent')) {
+          setErrorMessage("Transaction was cancelled or rejected by wallet.");
+        } else if (e.message && e.message.includes('Wallet not connected')) {
+          setErrorMessage("Wallet connection lost. Please reconnect and try again.");
+        } else {
+          setErrorMessage(`Transaction failed: ${e.message || 'Unknown error'}`);
+        }
+        
         setIsProcessing(false);
         return;
       }
-  
-      if (!result) {
-        console.warn("⚠️ No result returned from transaction. Possibly cancelled.");
-        setErrorMessage("No response from wallet. Transaction may have been cancelled.");
-        setIsProcessing(false);
-        return;
-      }
-  
-      // Success flow
-      console.log("🎉 Updating user data...");
-      await updateUser(user?.telegram_id, {
-        gems: user.gems + selectedPackage.gems,
-        tms_points: user.tms_points + selectedPackage.tmsPoints,
-        t_keys: user.t_keys + selectedPackage.keys
-      });
-  
-      setShowPaymentModal(false);
-      alert(`✅ Successfully purchased ${selectedPackage.title}!`);
       
     } catch (error) {
       console.error("🔥 Unexpected error in handleConfirmPayment:", error);
-      if (error.message && error.message.includes('Wallet declined')) {
-        setErrorMessage('Transaction was declined by the wallet.');
-      } else {
-        setErrorMessage('Transaction failed. Please try again.');
-      }
+      setErrorMessage(`An unexpected error occurred: ${error.message || 'Unknown error'}`);
     } finally {
       setIsProcessing(false);
       console.log("🧹 Done processing payment");
     }
   };
-  
 
   return (
     <ResponsivePadding>
@@ -156,6 +153,7 @@ const RewardsPanel = () => {
         {/* Wallet connection button */}
         <div className="mb-4">
           <ConnectButton/>
+         
         </div>
         
         <div className="flex w-full max-w-xl mx-auto border-b-2 border-black" style={{marginBottom:'20px'}}>

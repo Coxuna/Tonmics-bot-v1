@@ -50,6 +50,17 @@ const megaPackages = [
     keys: 35,
     tmsPoints: 3500,
     wide: false,
+  }, 
+  {
+    id: 10,
+    title: "🌟 Test Package",
+    description: <>🔓 Unlock <strong>10 $TMS Points + 1 Golden Keys</strong></>,
+    price: " 2 ⭐ (0.000001 TON)",
+    tonAmount: "0.000001",
+    gems: 0,
+    keys: 1,
+    tmsPoints: 10,
+    wide: false,
   },
 ];
 

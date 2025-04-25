@@ -23,6 +23,7 @@ function App() {
          
           actionsConfiguration={{
               twaReturnUrl: 'https://t.me/TonmicsApp_bot/Tonmics'
+             
           }}
       >
         <div className="app">
