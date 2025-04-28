@@ -315,7 +315,7 @@ const highestScoreRef = useRef(0);
 const [sessionScore, setSessionScore] = useState(0);
 const sessionScoreRef = useRef(0);
 const [toastMessage3, setToastMessage3] = useState("");
-{/* 
+ 
 useEffect(() => {
   if (isLoaded) {
     // Need to call this from a user interaction event
@@ -387,7 +387,7 @@ useEffect(() => {
   }
 }, [isLoaded, isMuted, playSound, playBackgroundMusic, stopBackgroundMusic, startPlaylist, getAvailableMainThemes]);
 
-*/}
+
 // Update the refs whenever their respective states change
 useEffect(() => {
   gridRef.current = grid;
