@@ -13,6 +13,7 @@ export const useSoundManager = () => {
   const initialized = useRef(false);
   const fadeTransitionRef = useRef(null);
   const duckingTimeoutRef = useRef(null);
+  const volumeRestoreMap = useRef({}); // Tracks volume restoration for each track
   
   // For random playlist implementation
   const playlistRef = useRef({
@@ -518,76 +519,119 @@ export const useSoundManager = () => {
   }, [isMuted, isLoaded, currentMusicTrack, volume, stopPlaylist]);
 
   // 8. Play a specific sound with volume ducking - depends on other functions
-  const playSound = useCallback((soundName, duckMusic = false, duckAmount = 0.7, duckDuration = 1000) => {
-    if (isMuted || !isLoaded) {
-      console.log(`Sound not played (${isMuted ? 'muted' : 'not loaded'}): ${soundName}`);
-      return;
-    }
-    
-    // Check if it's a music track or sound effect
-    if (soundName.startsWith('music.')) {
-      const trackName = soundName.split('.')[1];
-      switchBackgroundMusic(trackName);
-      return;
-    }
-    
-    const sound = sounds.current[soundName];
-    if (!sound) {
-      console.error(`Sound not found: ${soundName}`);
-      return;
-    }
-    
-    console.log(`Attempting to play sound: ${soundName}${duckMusic ? ' with music ducking' : ''}`);
-    
-    // Mark that we've had user interaction (since this is called from click handlers)
-    userInteractedRef.current = true;
-    
-    // Implement volume ducking if requested
-    let originalMusicVolume = null;
-    if (duckMusic && !isMuted) {
-      // Store original music volume and reduce it
-      originalMusicVolume = sounds.current.music[currentMusicTrack].volume;
-      const duckVolume = originalMusicVolume * (1 - duckAmount);
-      
-      // Apply ducking to current music track
-      sounds.current.music[currentMusicTrack].volume = duckVolume;
-      
-      // Set timeout to restore volume
-      if (duckingTimeoutRef.current) {
-        clearTimeout(duckingTimeoutRef.current);
-      }
-      
-      duckingTimeoutRef.current = setTimeout(() => {
-        // Only restore if we're still playing the same track
-        if (sounds.current.music[currentMusicTrack]) {
-          sounds.current.music[currentMusicTrack].volume = originalMusicVolume;
-          console.log(`Restored music volume after ducking for: ${soundName}`);
+  // Fixed playSound function with proper closure handling
+// Add this to the top of your hook with other refs
+
+
+// Updated playSound function with independent volume tracking
+// Updated playSound function with improved ducking mechanism
+const playSound = useCallback((soundName, duckMusic = false, duckAmount = 0.7, duckDuration = 1000) => {
+  if (isMuted || !isLoaded) {
+    console.log(`Sound not played (${isMuted ? 'muted' : 'not loaded'}): ${soundName}`);
+    return;
+  }
+  
+ 
+  
+  const sound = sounds.current[soundName];
+  if (!sound) {
+    console.error(`Sound not found: ${soundName}`);
+    return;
+  }
+  
+  console.log(`Playing sound: ${soundName}${duckMusic ? ' with music ducking' : ''}`);
+  
+  // Mark that we've had user interaction
+  userInteractedRef.current = true;
+  
+  // Handle ducking if requested
+  if (duckMusic && !isMuted) {
+    // For each music track that's currently playing
+    Object.entries(sounds.current.music).forEach(([trackName, track]) => {
+      // Only duck tracks that are actually playing
+      if (track && !track.paused) {
+        // Store the current volume before ducking (not the potentially already-ducked volume)
+        const currentVolume = track.volume;
+        const duckVolume = volume * (1 - duckAmount); // Use the base volume setting instead
+        
+        // Create an entry for this track if it doesn't exist
+        if (!volumeRestoreMap.current[trackName]) {
+          volumeRestoreMap.current[trackName] = {
+            originalVolume: currentVolume,
+            timerId: null
+          };
+        } else {
+          // If there's an existing timer, clear it
+          if (volumeRestoreMap.current[trackName].timerId) {
+            clearTimeout(volumeRestoreMap.current[trackName].timerId);
+          }
+          // Always store the current volume before ducking
+          volumeRestoreMap.current[trackName].originalVolume = currentVolume;
         }
-        duckingTimeoutRef.current = null;
-      }, duckDuration);
-    }
-    
-    // Reset the sound to the beginning if it's already playing
-    sound.currentTime = 0;
-    
-    sound.play().then(() => {
-      console.log(`Successfully playing sound: ${soundName}`);
-      initialized.current = true;
-    }).catch(error => {
-      console.error(`Error playing sound: ${soundName}`, error);
-      
-      // If ducking was applied but sound failed, restore volume immediately
-      if (duckMusic && originalMusicVolume !== null && !isMuted) {
-        sounds.current.music[currentMusicTrack].volume = originalMusicVolume;
-      }
-      
-      if (error.name === 'NotAllowedError') {
-        console.warn('Sound blocked by browser - requires user interaction first');
-        initialized.current = false;
+        
+        // Apply the ducking
+        track.volume = duckVolume;
+        console.log(`Ducked ${trackName} from ${currentVolume} to ${duckVolume}`);
+        
+        // Create a new timer to restore volume
+        const timerId = setTimeout(() => {
+          // Capture the specific track and trackName in this closure
+          const specificTrack = sounds.current.music[trackName];
+          const restoreData = volumeRestoreMap.current[trackName];
+          
+          if (specificTrack && restoreData) {
+            // Instead of restoring to originalVolume, check if we should restore to base volume
+            // or to the stored original volume
+            const restoreValue = restoreData.originalVolume;
+            specificTrack.volume = restoreValue;
+            console.log(`Restored ${trackName} to volume ${restoreValue}`);
+            
+            // Clean up
+            if (volumeRestoreMap.current[trackName]) {
+              volumeRestoreMap.current[trackName].timerId = null;
+            }
+          }
+        }, duckDuration);
+        
+        // Store the timer ID
+        volumeRestoreMap.current[trackName].timerId = timerId;
       }
     });
-  }, [isMuted, isLoaded, currentMusicTrack, switchBackgroundMusic]);
-
+  }
+  
+  // Reset the sound to the beginning if it's already playing
+  sound.currentTime = 0;
+  
+  // Play the sound
+  sound.play().then(() => {
+    console.log(`Successfully playing sound: ${soundName}`);
+    initialized.current = true;
+  }).catch(error => {
+    console.error(`Error playing sound: ${soundName}`, error);
+    
+    // If sound failed, restore any ducked volumes immediately
+    if (duckMusic && !isMuted) {
+      Object.entries(volumeRestoreMap.current).forEach(([trackName, data]) => {
+        const track = sounds.current.music[trackName];
+        if (track && data.originalVolume) {
+          track.volume = data.originalVolume;
+          
+          // Clear the timer if it exists
+          if (data.timerId) {
+            clearTimeout(data.timerId);
+            data.timerId = null;
+          }
+        }
+      });
+    }
+    
+    if (error.name === 'NotAllowedError') {
+      console.warn('Sound blocked by browser - requires user interaction first');
+      initialized.current = false;
+    }
+  });
+}, [isMuted, isLoaded, volume, switchBackgroundMusic]);
+  
   // 9. Toggle mute state - uses multiple functions
   const toggleMute = useCallback(() => {
     setIsMuted(prev => {
@@ -611,11 +655,17 @@ export const useSoundManager = () => {
 
   // 10. Temporarily duck the background music - no function dependencies
   const duckBackgroundMusic = useCallback((duckAmount = 0.7, duration = 1000) => {
-    if (isMuted || !isLoaded || !sounds.current.music[currentMusicTrack]) {
+    if (isMuted || !isLoaded) {
       return;
     }
     
-    const track = sounds.current.music[currentMusicTrack];
+    const currentTrackName = currentMusicTrack;
+    const track = sounds.current.music[currentTrackName];
+    
+    if (!track) {
+      return;
+    }
+    
     const originalVolume = track.volume;
     const targetVolume = originalVolume * (1 - duckAmount);
     
@@ -630,9 +680,12 @@ export const useSoundManager = () => {
     }
     
     duckingTimeoutRef.current = setTimeout(() => {
-      if (sounds.current.music[currentMusicTrack]) {
-        sounds.current.music[currentMusicTrack].volume = originalVolume;
-        console.log('Restored music volume after manual ducking');
+      // Store reference to the track that was ducked
+      const musicTrack = sounds.current.music[currentTrackName];
+      
+      if (musicTrack) {
+        musicTrack.volume = originalVolume;
+        console.log(`Restored music volume for track ${currentTrackName} after manual ducking`);
       }
       duckingTimeoutRef.current = null;
     }, duration);

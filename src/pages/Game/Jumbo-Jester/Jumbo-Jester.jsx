@@ -331,7 +331,7 @@ useEffect(() => {
 useEffect(() => {
   console.log(`Sound system status: ${isLoaded ? 'Loaded' : 'Loading'}`);
   
-  const gameContainer = document.querySelector('.game-container');
+  const gameContainer = document.querySelector('.game');
   if (gameContainer) {
     const handleFirstInteraction = () => {
       console.log('First interaction detected, starting main theme playlist');
@@ -1007,7 +1007,7 @@ const initializeGame = async() => {
         // Play countdown sound when time is decreasing
         // You might want to only play it during the last 5 seconds
         if (prevTime === 3) {
-          playSound('countdown', true, 0.9, 3000); 
+          playSound('countdown'); 
         }
         
        
@@ -1122,7 +1122,7 @@ const initializeGame = async() => {
     // Calculate completion statistics
     const completedWords = wordResults.filter(result => result.isComplete).length;
     const totalWords = wordsToValidate.length;
-    playSound('submit', true, 0.5, 1000); 
+    playSound('submit'); 
     
     // Update session score
   const newSessionScore = parseFloat(sessionScoreRef.current) + parseFloat(earnedPoints);
@@ -1165,15 +1165,15 @@ const initializeGame = async() => {
     setToastMessage(`Perfect! Level ${levelRef.current} complete!`);
     setToastMessage2(`+${earnedPoints} TMS points (${newTotalPoints} total)`);
     setToastMessage3(`Highest Level: ${highestLevelRef.current} | Session Score: ${newSessionScore} | Best Score: ${highestScoreRef.current}`);
-    playSound('success', true, 0.5, 1000); 
+    playSound('success'); 
     // Play victory music when completing a level
-    playSound('victory', true, 0.8, 1000); 
+    playSound('victory'); 
   } else {
     setToastType("gameOver");
     setToastMessage(`Time's up! You got ${correct}/${totalWords} completed words correct`);
     setToastMessage2(`+${earnedPoints} TMS points (${newTotalPoints} total)`);
     setToastMessage3(`Highest Level: ${highestLevelRef.current} | Session Score: ${newSessionScore} | Best Score: ${highestScoreRef.current}`);
-    playSound('fail', true, 0.5, 1000); 
+    playSound('fail'); 
     // Reset session score on game over
     console.log("Game over (time up), resetting session score for next game");
     // Reset will happen on restart
@@ -1416,7 +1416,7 @@ const initializeGame = async() => {
     // Flag to determine if we should proceed to next level
     const allWordsCorrect = correct === totalWords && completedWords === totalWords;
 
-    playSound('submit',true, 0.5, 1000); 
+    playSound('submit'); 
     
     // Show appropriate toast based on performance
     if (completedWords === 0) {
@@ -1434,9 +1434,9 @@ const initializeGame = async() => {
       
       // Schedule the next level after showing success message
       setAutoLevelAdvanceScheduled(true);
-      playSound('success', true, 0.5, 1000); 
+      playSound('success'); 
        // Play victory music when completing a level
-       playSound('victory', true, 0.8, 1000); 
+       playSound('victory'); 
   
  
     } else {
@@ -1445,7 +1445,7 @@ const initializeGame = async() => {
       setToastMessage(`Score: ${correct}/3 completed words correct`);
       setToastMessage2(`+${earnedPoints} TMS points (${newTotalPoints} total)`);
       setToastMessage3(`Highest Level: ${highestLevelRef.current} | Session Score: ${newSessionScore} | Best Score: ${highestScoreRef.current}`);
-      playSound('fail',true, 0.5, 1000); 
+      playSound('fail'); 
     }
     
     // If game ends, reset session score for next game
@@ -2228,7 +2228,7 @@ const cycleThroughMusic = () => {
         <span className="font-bold text-gray-800 text-xs sm:text-sm ml-1">{levelRef.current}</span>
       </div>
 
-{/* 
+
       <div 
   className="bg-white p-1 px-2 rounded-lg shadow-md flex items-center justify-center cursor-pointer"
   onClick={handleToggleMute}
@@ -2239,12 +2239,7 @@ const cycleThroughMusic = () => {
        startPlaylist();
     }
   }}
-  onContextMenu={(e) => {
-    e.preventDefault();
-    if (!isMuted) {
-      cycleThroughMusic();
-    }
-  }}
+  
 >
   {isMuted ? (
     <span className="text-gray-800 text-xs sm:text-sm">🔇</span>
@@ -2252,7 +2247,7 @@ const cycleThroughMusic = () => {
     <span className="text-gray-800 text-xs sm:text-sm">🔊</span>
   )}
 </div>
-*/}
+
     </div>
   </div>
 </div>
@@ -2430,7 +2425,7 @@ const cycleThroughMusic = () => {
 <button
 onClick={gameStarted ? checkAnswers : initializeGame}
 disabled={isLoading || validatingWords || (availableTrials <= 0 && !gameStarted)}
-className={`w-full py-3 rounded-xl font-bold text-lg shadow-lg transition-all duration-300 transform hover:scale-105 ${
+className={`w-full py-3 rounded-xl game font-bold text-lg shadow-lg transition-all duration-300 transform hover:scale-105 ${
   isLoading || validatingWords || (availableTrials <= 0 && !gameStarted)
     ? "bg-gray-300 text-gray-500 cursor-not-allowed"
     : "bg-[#18325B] text-white hover:from-pink-600 hover:via-purple-600 hover:to-indigo-600"
